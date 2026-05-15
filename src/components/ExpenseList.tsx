@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
 import type { CategoryFilter, CategoryKey, Expense, PeriodFilter } from "../types";
 import { filterExpenses, getTotalUsed, sortExpensesByLatest } from "../utils/calculations";
@@ -8,7 +8,7 @@ import { DatePicker } from "./DatePicker";
 
 type ExpenseListProps = {
   expenses: Expense[];
-  onDeleteExpense: (id: string) => void | Promise<void>;
+  onDeleteExpense: (id: string) => boolean | void | Promise<boolean | void>;
   onImportExpenses: (expenses: Expense[]) => boolean | void | Promise<boolean | void>;
   onReset: () => void | Promise<void>;
   onUpdateExpense: (expense: Expense) => boolean | void | Promise<boolean | void>;
@@ -47,6 +47,8 @@ export function ExpenseList({
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredExpenses = useMemo(
@@ -56,6 +58,39 @@ export function ExpenseList({
 
   const sortedExpenses = useMemo(() => sortExpensesByLatest(filteredExpenses), [filteredExpenses]);
   const filteredTotalUsed = useMemo(() => getTotalUsed(filteredExpenses), [filteredExpenses]);
+
+  const closeDeleteDialog = () => {
+    if (!isDeleting) {
+      setDeleteTarget(null);
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isDeleting) {
+        setDeleteTarget(null);
+      }
+    };
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [deleteTarget, isDeleting]);
 
   const startEdit = (expense: Expense) => {
     setEditingId(expense.id);
@@ -104,12 +139,25 @@ export function ExpenseList({
   };
 
   const confirmDelete = (expense: Expense) => {
-    const shouldDelete = window.confirm(
-      `${CATEGORY_LABELS[expense.category]} ${formatWon(expense.amount)} 내역을 삭제할까요?`,
-    );
+    setDeleteTarget(expense);
+  };
 
-    if (shouldDelete) {
-      onDeleteExpense(expense.id);
+  const deleteExpense = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const wasDeleted = await onDeleteExpense(deleteTarget.id);
+
+      if (wasDeleted === false) {
+        return;
+      }
+
+      setDeleteTarget(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -367,6 +415,60 @@ export function ExpenseList({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {deleteTarget && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeDeleteDialog}>
+          <section
+            className="confirm-dialog"
+            role="dialog"
+            aria-label="사용 내역 삭제 확인"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="confirm-dialog__header">
+              <h2>사용 내역을 삭제할까요?</h2>
+              <p>삭제한 내역은 다시 복구할 수 없습니다.</p>
+            </div>
+
+            <div className="confirm-dialog__summary">
+              <div>
+                <span>날짜</span>
+                <strong>{deleteTarget.date}</strong>
+              </div>
+              <div>
+                <span>항목</span>
+                <strong>{CATEGORY_LABELS[deleteTarget.category]}</strong>
+              </div>
+              <div>
+                <span>금액</span>
+                <strong>{formatWon(deleteTarget.amount)}</strong>
+              </div>
+              <div>
+                <span>메모</span>
+                <strong>{deleteTarget.memo || "-"}</strong>
+              </div>
+            </div>
+
+            <div className="confirm-dialog__actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={closeDeleteDialog}
+                disabled={isDeleting}
+              >
+                취소
+              </button>
+              <button
+                className="ghost-button confirm-dialog__delete"
+                type="button"
+                onClick={deleteExpense}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "삭제 중" : "삭제"}
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>

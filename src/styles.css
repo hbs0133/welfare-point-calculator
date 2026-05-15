@@ -558,6 +558,75 @@ button:disabled {
   background: var(--danger-soft);
 }
 
+.confirm-dialog {
+  width: min(420px, 100%);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(25, 31, 40, 0.18);
+  padding: 24px;
+}
+
+.confirm-dialog__header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.18rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.confirm-dialog__header p {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.confirm-dialog__summary {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 20px;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 14px;
+}
+
+.confirm-dialog__summary div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.confirm-dialog__summary span {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.confirm-dialog__summary strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-dialog__actions button {
+  min-width: 72px;
+}
+
+.confirm-dialog__delete {
+  min-height: 40px;
+}
+
 .tool-panel {
   background: #ffffff;
   padding: 24px;
@@ -1254,6 +1323,7 @@ button:disabled {
   .summary-card,
   .category-card,
   .category-detail,
+  .confirm-dialog,
   .tool-panel {
     padding: 16px;
   }
@@ -1279,5 +1349,13 @@ button:disabled {
 
   .secondary-button {
     width: 100%;
+  }
+
+  .confirm-dialog__actions .secondary-button {
+    width: auto;
+  }
+
+  .confirm-dialog__actions button {
+    flex: 1;
   }
 }

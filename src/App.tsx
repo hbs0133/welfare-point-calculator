@@ -150,7 +150,7 @@ function App() {
 
   const deleteExpense = async (id: string) => {
     if (!userId) {
-      return;
+      return false;
     }
 
     const { error } = await supabase
@@ -162,12 +162,13 @@ function App() {
     if (error) {
       setSyncMessage("");
       setSyncErrorMessage(getSyncErrorMessage("사용 내역을 삭제하지 못했습니다.", error));
-      return;
+      return false;
     }
 
     setExpenses((currentExpenses) => currentExpenses.filter((expense) => expense.id !== id));
     setSyncErrorMessage("");
     setSyncMessage("사용 내역을 삭제했습니다.");
+    return true;
   };
 
   const updateExpense = async (updatedExpense: Expense) => {
