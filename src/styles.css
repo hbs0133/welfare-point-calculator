@@ -404,8 +404,8 @@ button:disabled {
 }
 
 .category-card--club {
-  --category-color: #8b5cf6;
-  --category-soft: #f4f0ff;
+  --category-color: #ec6f8f;
+  --category-soft: #fff3f6;
 }
 
 .category-card--exercise {
@@ -1154,8 +1154,8 @@ button:disabled {
 }
 
 .category-pill.club {
-  background: #f4f0ff;
-  color: #6d3fd7;
+  background: #fff3f6;
+  color: #cf3f68;
 }
 
 .category-pill.exercise {
