@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { createAuthEmail, isValidLoginId, normalizeLoginId } from "../utils/authIdentity";
 
 type AuthMode = "signIn" | "signUp";
 
@@ -14,21 +15,21 @@ const AUTH_COPY: Record<
 > = {
   signIn: {
     title: "로그인",
-    description: "회사에서 사용할 이메일과 비밀번호로 접속하세요.",
+    description: "회사에서 사용할 아이디와 비밀번호로 접속하세요.",
     button: "로그인",
     success: "로그인되었습니다.",
   },
   signUp: {
     title: "계정 만들기",
-    description: "처음 사용하는 동료라면 이메일로 계정을 만들 수 있어요.",
+    description: "처음 사용하는 동료라면 아이디로 계정을 만들 수 있어요.",
     button: "가입하기",
-    success: "가입이 완료되었습니다. 메일 확인이 필요한 경우 받은 편지함을 확인하세요.",
+    success: "가입이 완료되었습니다. 이제 로그인할 수 있어요.",
   },
 };
 
 export function AuthPanel() {
   const [mode, setMode] = useState<AuthMode>("signIn");
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -41,22 +42,36 @@ export function AuthPanel() {
     setMessage("");
     setErrorMessage("");
 
-    if (!email.trim() || !password) {
-      setErrorMessage("이메일과 비밀번호를 입력해주세요.");
+    const normalizedLoginId = normalizeLoginId(loginId);
+
+    if (!normalizedLoginId || !password) {
+      setErrorMessage("아이디와 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (!isValidLoginId(normalizedLoginId)) {
+      setErrorMessage("아이디는 영문, 숫자, 점, 밑줄, 하이픈 조합으로 3~30자까지 사용할 수 있어요.");
       return;
     }
 
     setIsSubmitting(true);
 
+    const authEmail = createAuthEmail(normalizedLoginId);
+
     const { error } =
       mode === "signIn"
         ? await supabase.auth.signInWithPassword({
-            email: email.trim(),
+            email: authEmail,
             password,
           })
         : await supabase.auth.signUp({
-            email: email.trim(),
+            email: authEmail,
             password,
+            options: {
+              data: {
+                loginId: normalizedLoginId,
+              },
+            },
           });
 
     setIsSubmitting(false);
@@ -96,13 +111,13 @@ export function AuthPanel() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field">
-            <span>아이디(이메일)</span>
+            <span>아이디</span>
             <input
-              type="email"
-              autoComplete="email"
-              placeholder="name@asoosoft.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              type="text"
+              autoComplete="username"
+              placeholder="hbs0133"
+              value={loginId}
+              onChange={(event) => setLoginId(event.target.value)}
             />
           </label>
 

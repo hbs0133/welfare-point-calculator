@@ -8,7 +8,7 @@ https://welfare-point-calculator.vercel.app
 
 ## 주요 기능
 
-- 이메일/비밀번호 기반 로그인
+- 아이디/비밀번호 기반 로그인
 - Supabase DB 저장 및 사용자별 데이터 분리
 - 복지 포인트 사용 내역 추가, 수정, 삭제
 - 삭제 전 확인창
@@ -80,7 +80,9 @@ Supabase 프로젝트에서 `SQL Editor`를 열고 [supabase/schema.sql](supabas
 - 수정일 자동 갱신 트리거
 - 사용자/날짜 기준 인덱스
 
-Auth 설정에서 이메일 인증을 켜두면 회원가입 후 확인 메일을 눌러야 로그인할 수 있습니다. 내부 도구로 바로 사용하려면 Supabase Dashboard의 Authentication 설정에서 이메일 확인 정책을 원하는 방식으로 조정하세요.
+화면에서는 이메일을 받지 않고 `아이디`만 받습니다. Supabase Auth 내부에서는 `아이디@welfare-point.asoosoft.local` 형식의 내부 이메일로 변환해 계정을 만듭니다.
+
+이 방식은 실제 이메일을 받을 수 없으므로, 내부 도구로 바로 사용하려면 Supabase Dashboard의 Authentication 설정에서 이메일 확인을 꺼두는 것을 권장합니다.
 
 ## 빌드
 
