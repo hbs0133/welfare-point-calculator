@@ -1017,6 +1017,21 @@ button:disabled {
   box-shadow: var(--shadow-soft);
 }
 
+.auth-back-button,
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--blue-dark);
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-back-button:hover,
+.link-button:hover {
+  color: var(--blue);
+}
+
 .auth-copy {
   margin: 24px 0 18px;
 }
@@ -1038,6 +1053,19 @@ button:disabled {
 .auth-form {
   display: grid;
   gap: 14px;
+}
+
+.auth-domain-note {
+  margin: -6px 0 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.auth-helper {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
 }
 
 .empty-state {

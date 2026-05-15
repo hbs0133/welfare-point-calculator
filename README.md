@@ -9,6 +9,7 @@ https://welfare-point-calculator.vercel.app
 ## 주요 기능
 
 - 회사 이메일/비밀번호 기반 로그인
+- 회사 이메일 기반 비밀번호 재설정
 - Supabase DB 저장 및 사용자별 데이터 분리
 - 복지 포인트 사용 내역 추가, 수정, 삭제
 - 삭제 전 확인창
@@ -115,6 +116,7 @@ src/
     DatePicker.tsx
     ExpenseForm.tsx
     ExpenseList.tsx
+    PasswordUpdatePanel.tsx
     SummaryCard.tsx
   lib/
     supabase.ts

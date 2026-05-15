@@ -5,6 +5,7 @@ import { CategoryCard } from "./components/CategoryCard";
 import { CategoryDetail } from "./components/CategoryDetail";
 import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
+import { PasswordUpdatePanel } from "./components/PasswordUpdatePanel";
 import { SummaryCard } from "./components/SummaryCard";
 import { STORAGE_KEY } from "./constants";
 import {
@@ -35,6 +36,12 @@ const loadLocalExpenses = (): Expense[] => {
 const getSyncErrorMessage = (fallback: string, error: unknown) =>
   error instanceof Error ? error.message : fallback;
 
+const isPasswordRecoveryUrl = () => {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const searchParams = new URLSearchParams(window.location.search);
+  return hashParams.get("type") === "recovery" || searchParams.get("type") === "recovery";
+};
+
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
@@ -44,6 +51,7 @@ function App() {
   const [syncMessage, setSyncMessage] = useState("");
   const [syncErrorMessage, setSyncErrorMessage] = useState("");
   const [localBackupCount, setLocalBackupCount] = useState(() => loadLocalExpenses().length);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(isPasswordRecoveryUrl);
 
   const userId = session?.user.id ?? null;
   const userEmail = session?.user.email ?? "";
@@ -87,17 +95,23 @@ function App() {
       }
 
       setSession(data.session);
+      setIsPasswordRecovery(Boolean(data.session) && isPasswordRecoveryUrl());
       setIsAuthLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+
+      if (event === "PASSWORD_RECOVERY") {
+        setIsPasswordRecovery(true);
+      }
 
       if (!nextSession) {
         setExpenses([]);
         setSelectedCategory(null);
+        setIsPasswordRecovery(false);
       }
     });
 
@@ -257,13 +271,7 @@ function App() {
 
   const importExpenses = (importedExpenses: Expense[]) => replaceExpenses(importedExpenses);
 
-  const resetExpenses = async () => {
-    if (!window.confirm("모든 사용 내역을 초기화할까요?")) {
-      return;
-    }
-
-    await replaceExpenses([]);
-  };
+  const resetExpenses = () => replaceExpenses([]);
 
   const migrateLocalExpenses = async () => {
     if (!userId) {
@@ -377,6 +385,8 @@ function App() {
 
       {!session ? (
         <AuthPanel />
+      ) : isPasswordRecovery ? (
+        <PasswordUpdatePanel onComplete={() => setIsPasswordRecovery(false)} />
       ) : (
         <>
           {(syncMessage || syncErrorMessage || localBackupCount > 0) && (

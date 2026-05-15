@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-type AuthMode = "signIn" | "signUp";
+type AuthMode = "signIn" | "signUp" | "resetPassword";
 
 const COMPANY_EMAIL_DOMAIN = "@asoosoft.net";
 
@@ -26,6 +26,12 @@ const AUTH_COPY: Record<
     button: "가입하기",
     success: "인증 메일을 보냈습니다. 회사 메일함에서 인증을 완료해주세요.",
   },
+  resetPassword: {
+    title: "비밀번호 재설정",
+    description: "회사 이메일로 비밀번호 재설정 링크를 보내드립니다.",
+    button: "재설정 메일 보내기",
+    success: "비밀번호 재설정 메일을 보냈습니다. 회사 메일함을 확인해주세요.",
+  },
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -41,6 +47,14 @@ export function AuthPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const copy = AUTH_COPY[mode];
+  const shouldShowPassword = mode !== "resetPassword";
+
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setMessage("");
+    setErrorMessage("");
+    setPassword("");
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,7 +63,12 @@ export function AuthPanel() {
 
     const normalizedEmail = normalizeEmail(email);
 
-    if (!normalizedEmail || !password) {
+    if (!normalizedEmail) {
+      setErrorMessage("회사 이메일을 입력해주세요.");
+      return;
+    }
+
+    if (shouldShowPassword && !password) {
       setErrorMessage("회사 이메일과 비밀번호를 입력해주세요.");
       return;
     }
@@ -67,13 +86,17 @@ export function AuthPanel() {
             email: normalizedEmail,
             password,
           })
-        : await supabase.auth.signUp({
-            email: normalizedEmail,
-            password,
-            options: {
-              emailRedirectTo: window.location.origin,
-            },
-          });
+        : mode === "signUp"
+          ? await supabase.auth.signUp({
+              email: normalizedEmail,
+              password,
+              options: {
+                emailRedirectTo: window.location.origin,
+              },
+            })
+          : await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+              redirectTo: window.location.origin,
+            });
 
     setIsSubmitting(false);
 
@@ -88,22 +111,28 @@ export function AuthPanel() {
   return (
     <section className="auth-layout">
       <div className="auth-card">
-        <div className="auth-tabs" aria-label="인증 방식">
-          <button
-            className={`auth-tab ${mode === "signIn" ? "is-active" : ""}`}
-            type="button"
-            onClick={() => setMode("signIn")}
-          >
-            로그인
+        {mode !== "resetPassword" ? (
+          <div className="auth-tabs" aria-label="인증 방식">
+            <button
+              className={`auth-tab ${mode === "signIn" ? "is-active" : ""}`}
+              type="button"
+              onClick={() => switchMode("signIn")}
+            >
+              로그인
+            </button>
+            <button
+              className={`auth-tab ${mode === "signUp" ? "is-active" : ""}`}
+              type="button"
+              onClick={() => switchMode("signUp")}
+            >
+              회원가입
+            </button>
+          </div>
+        ) : (
+          <button className="auth-back-button" type="button" onClick={() => switchMode("signIn")}>
+            로그인으로 돌아가기
           </button>
-          <button
-            className={`auth-tab ${mode === "signUp" ? "is-active" : ""}`}
-            type="button"
-            onClick={() => setMode("signUp")}
-          >
-            회원가입
-          </button>
-        </div>
+        )}
 
         <div className="auth-copy">
           <h2>{copy.title}</h2>
@@ -121,23 +150,34 @@ export function AuthPanel() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </label>
+          <p className="auth-domain-note">{COMPANY_EMAIL_DOMAIN} 회사 이메일만 사용할 수 있어요.</p>
 
-          <label className="field">
-            <span>비밀번호</span>
-            <input
-              type="password"
-              autoComplete={mode === "signIn" ? "current-password" : "new-password"}
-              minLength={6}
-              placeholder="6자 이상"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
+          {shouldShowPassword && (
+            <label className="field">
+              <span>비밀번호</span>
+              <input
+                type="password"
+                autoComplete={mode === "signIn" ? "current-password" : "new-password"}
+                minLength={6}
+                placeholder="6자 이상"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+          )}
 
           <button className="primary-button" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "처리 중" : copy.button}
           </button>
         </form>
+
+        {mode === "signIn" && (
+          <div className="auth-helper">
+            <button className="link-button" type="button" onClick={() => switchMode("resetPassword")}>
+              비밀번호를 잊으셨나요?
+            </button>
+          </div>
+        )}
 
         <div className="form-messages" aria-live="polite">
           {message && <p className="success-text">{message}</p>}

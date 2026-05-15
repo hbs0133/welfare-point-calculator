@@ -10,7 +10,7 @@ type ExpenseListProps = {
   expenses: Expense[];
   onDeleteExpense: (id: string) => boolean | void | Promise<boolean | void>;
   onImportExpenses: (expenses: Expense[]) => boolean | void | Promise<boolean | void>;
-  onReset: () => void | Promise<void>;
+  onReset: () => boolean | void | Promise<boolean | void>;
   onUpdateExpense: (expense: Expense) => boolean | void | Promise<boolean | void>;
 };
 
@@ -49,6 +49,8 @@ export function ExpenseList({
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredExpenses = useMemo(
@@ -65,14 +67,21 @@ export function ExpenseList({
     }
   };
 
+  const closeResetDialog = () => {
+    if (!isResetting) {
+      setIsResetDialogOpen(false);
+    }
+  };
+
   useLayoutEffect(() => {
-    if (!deleteTarget) {
+    if (!deleteTarget && !isResetDialogOpen) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isDeleting) {
+      if (event.key === "Escape" && !isDeleting && !isResetting) {
         setDeleteTarget(null);
+        setIsResetDialogOpen(false);
       }
     };
     const originalOverflow = document.body.style.overflow;
@@ -90,7 +99,7 @@ export function ExpenseList({
       document.body.style.paddingRight = originalPaddingRight;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [deleteTarget, isDeleting]);
+  }, [deleteTarget, isDeleting, isResetDialogOpen, isResetting]);
 
   const startEdit = (expense: Expense) => {
     setEditingId(expense.id);
@@ -158,6 +167,22 @@ export function ExpenseList({
       setDeleteTarget(null);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const resetExpenses = async () => {
+    setIsResetting(true);
+    try {
+      const wasReset = await onReset();
+
+      if (wasReset === false) {
+        return;
+      }
+
+      setIsResetDialogOpen(false);
+      cancelEdit();
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -235,7 +260,7 @@ export function ExpenseList({
           <button
             className="secondary-button"
             type="button"
-            onClick={onReset}
+            onClick={() => setIsResetDialogOpen(true)}
             disabled={expenses.length === 0}
           >
             전체 초기화
@@ -466,6 +491,52 @@ export function ExpenseList({
                 disabled={isDeleting}
               >
                 {isDeleting ? "삭제 중" : "삭제"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {isResetDialogOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeResetDialog}>
+          <section
+            className="confirm-dialog"
+            role="dialog"
+            aria-label="전체 사용 내역 초기화 확인"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="confirm-dialog__header">
+              <h2>전체 사용 내역을 초기화할까요?</h2>
+              <p>현재 계정의 모든 사용 내역이 삭제되며 다시 복구할 수 없습니다.</p>
+            </div>
+
+            <div className="confirm-dialog__summary">
+              <div>
+                <span>삭제 대상</span>
+                <strong>{expenses.length}건</strong>
+              </div>
+              <div>
+                <span>전체 사용 금액</span>
+                <strong>{formatWon(getTotalUsed(expenses))}</strong>
+              </div>
+            </div>
+
+            <div className="confirm-dialog__actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={closeResetDialog}
+                disabled={isResetting}
+              >
+                취소
+              </button>
+              <button
+                className="ghost-button confirm-dialog__delete"
+                type="button"
+                onClick={resetExpenses}
+                disabled={isResetting}
+              >
+                {isResetting ? "초기화 중" : "전체 초기화"}
               </button>
             </div>
           </section>
