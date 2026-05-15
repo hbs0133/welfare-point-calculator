@@ -7,7 +7,7 @@ import { DatePicker } from "./DatePicker";
 
 type ExpenseFormProps = {
   expenses: Expense[];
-  onAddExpense: (expense: Omit<Expense, "id">) => void;
+  onAddExpense: (expense: Omit<Expense, "id">) => boolean | void | Promise<boolean | void>;
 };
 
 export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
@@ -24,7 +24,7 @@ export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
     [amount, category, expenses],
   );
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!amount) {
@@ -37,12 +37,16 @@ export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
       return;
     }
 
-    onAddExpense({
+    const wasSaved = await onAddExpense({
       category,
       amount,
       memo: memo.trim(),
       date,
     });
+
+    if (wasSaved === false) {
+      return;
+    }
 
     setAmountInput("");
     setMemo("");

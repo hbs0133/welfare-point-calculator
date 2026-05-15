@@ -8,10 +8,10 @@ import { DatePicker } from "./DatePicker";
 
 type ExpenseListProps = {
   expenses: Expense[];
-  onDeleteExpense: (id: string) => void;
-  onImportExpenses: (expenses: Expense[]) => void;
-  onReset: () => void;
-  onUpdateExpense: (expense: Expense) => void;
+  onDeleteExpense: (id: string) => void | Promise<void>;
+  onImportExpenses: (expenses: Expense[]) => boolean | void | Promise<boolean | void>;
+  onReset: () => void | Promise<void>;
+  onUpdateExpense: (expense: Expense) => boolean | void | Promise<boolean | void>;
 };
 
 type EditDraft = {
@@ -72,7 +72,7 @@ export function ExpenseList({
     setEditDraft(null);
   };
 
-  const saveEdit = (expense: Expense) => {
+  const saveEdit = async (expense: Expense) => {
     if (!editDraft) {
       return;
     }
@@ -88,13 +88,18 @@ export function ExpenseList({
       return;
     }
 
-    onUpdateExpense({
+    const wasSaved = await onUpdateExpense({
       ...expense,
       category: editDraft.category,
       amount,
       memo: editDraft.memo.trim(),
       date: editDraft.date,
     });
+
+    if (wasSaved === false) {
+      return;
+    }
+
     cancelEdit();
   };
 
@@ -133,7 +138,7 @@ export function ExpenseList({
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const importedExpenses = parseExpensesCsv(String(reader.result ?? ""));
         const shouldImport =
@@ -144,7 +149,11 @@ export function ExpenseList({
           return;
         }
 
-        onImportExpenses(importedExpenses);
+        const wasImported = await onImportExpenses(importedExpenses);
+        if (wasImported === false) {
+          return;
+        }
+
         cancelEdit();
         window.alert(`${importedExpenses.length}건을 불러왔습니다.`);
       } catch (error) {

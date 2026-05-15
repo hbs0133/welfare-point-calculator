@@ -1,0 +1,133 @@
+import { FormEvent, useState } from "react";
+import { supabase } from "../lib/supabase";
+
+type AuthMode = "signIn" | "signUp";
+
+const AUTH_COPY: Record<
+  AuthMode,
+  {
+    title: string;
+    description: string;
+    button: string;
+    success: string;
+  }
+> = {
+  signIn: {
+    title: "로그인",
+    description: "회사에서 사용할 이메일과 비밀번호로 접속하세요.",
+    button: "로그인",
+    success: "로그인되었습니다.",
+  },
+  signUp: {
+    title: "계정 만들기",
+    description: "처음 사용하는 동료라면 이메일로 계정을 만들 수 있어요.",
+    button: "가입하기",
+    success: "가입이 완료되었습니다. 메일 확인이 필요한 경우 받은 편지함을 확인하세요.",
+  },
+};
+
+export function AuthPanel() {
+  const [mode, setMode] = useState<AuthMode>("signIn");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const copy = AUTH_COPY[mode];
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage("");
+    setErrorMessage("");
+
+    if (!email.trim() || !password) {
+      setErrorMessage("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const { error } =
+      mode === "signIn"
+        ? await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          })
+        : await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+          });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    setMessage(copy.success);
+  };
+
+  return (
+    <section className="auth-layout">
+      <div className="auth-card">
+        <div className="auth-tabs" aria-label="인증 방식">
+          <button
+            className={`auth-tab ${mode === "signIn" ? "is-active" : ""}`}
+            type="button"
+            onClick={() => setMode("signIn")}
+          >
+            로그인
+          </button>
+          <button
+            className={`auth-tab ${mode === "signUp" ? "is-active" : ""}`}
+            type="button"
+            onClick={() => setMode("signUp")}
+          >
+            회원가입
+          </button>
+        </div>
+
+        <div className="auth-copy">
+          <h2>{copy.title}</h2>
+          <p>{copy.description}</p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>아이디(이메일)</span>
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="name@asoosoft.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+
+          <label className="field">
+            <span>비밀번호</span>
+            <input
+              type="password"
+              autoComplete={mode === "signIn" ? "current-password" : "new-password"}
+              minLength={6}
+              placeholder="6자 이상"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+
+          <button className="primary-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "처리 중" : copy.button}
+          </button>
+        </form>
+
+        <div className="form-messages" aria-live="polite">
+          {message && <p className="success-text">{message}</p>}
+          {errorMessage && <p className="warning-text">{errorMessage}</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
