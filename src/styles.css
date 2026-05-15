@@ -145,6 +145,13 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
+.header-actions .secondary-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
 .summary-card,
 .category-card,
 .tool-panel {
@@ -861,6 +868,8 @@ button:disabled {
   border-color: transparent;
   color: var(--danger-dark);
   padding: 0 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
 .ghost-button:hover {
