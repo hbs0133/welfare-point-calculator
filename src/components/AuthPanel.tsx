@@ -1,8 +1,9 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { createAuthEmail, isValidLoginId, normalizeLoginId } from "../utils/authIdentity";
 
 type AuthMode = "signIn" | "signUp";
+
+const COMPANY_EMAIL_DOMAIN = "@asoosoft.net";
 
 const AUTH_COPY: Record<
   AuthMode,
@@ -15,21 +16,25 @@ const AUTH_COPY: Record<
 > = {
   signIn: {
     title: "로그인",
-    description: "회사에서 사용할 아이디와 비밀번호로 접속하세요.",
+    description: "회사 이메일과 비밀번호로 접속하세요.",
     button: "로그인",
     success: "로그인되었습니다.",
   },
   signUp: {
     title: "계정 만들기",
-    description: "처음 사용하는 동료라면 아이디로 계정을 만들 수 있어요.",
+    description: "처음 사용하는 동료라면 회사 이메일로 계정을 만들 수 있어요.",
     button: "가입하기",
-    success: "가입이 완료되었습니다. 이제 로그인할 수 있어요.",
+    success: "인증 메일을 보냈습니다. 회사 메일함에서 인증을 완료해주세요.",
   },
 };
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const isCompanyEmail = (email: string) => email.endsWith(COMPANY_EMAIL_DOMAIN);
+
 export function AuthPanel() {
   const [mode, setMode] = useState<AuthMode>("signIn");
-  const [loginId, setLoginId] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -42,35 +47,31 @@ export function AuthPanel() {
     setMessage("");
     setErrorMessage("");
 
-    const normalizedLoginId = normalizeLoginId(loginId);
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!normalizedLoginId || !password) {
-      setErrorMessage("아이디와 비밀번호를 입력해주세요.");
+    if (!normalizedEmail || !password) {
+      setErrorMessage("회사 이메일과 비밀번호를 입력해주세요.");
       return;
     }
 
-    if (!isValidLoginId(normalizedLoginId)) {
-      setErrorMessage("아이디는 영문, 숫자, 점, 밑줄, 하이픈 조합으로 3~30자까지 사용할 수 있어요.");
+    if (!isCompanyEmail(normalizedEmail)) {
+      setErrorMessage(`${COMPANY_EMAIL_DOMAIN} 회사 이메일만 사용할 수 있어요.`);
       return;
     }
 
     setIsSubmitting(true);
 
-    const authEmail = createAuthEmail(normalizedLoginId);
-
     const { error } =
       mode === "signIn"
         ? await supabase.auth.signInWithPassword({
-            email: authEmail,
+            email: normalizedEmail,
             password,
           })
         : await supabase.auth.signUp({
-            email: authEmail,
+            email: normalizedEmail,
             password,
             options: {
-              data: {
-                loginId: normalizedLoginId,
-              },
+              emailRedirectTo: window.location.origin,
             },
           });
 
@@ -111,13 +112,13 @@ export function AuthPanel() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field">
-            <span>아이디</span>
+            <span>회사 이메일</span>
             <input
-              type="text"
-              autoComplete="username"
-              placeholder="hbs0133"
-              value={loginId}
-              onChange={(event) => setLoginId(event.target.value)}
+              type="email"
+              autoComplete="email"
+              placeholder={`name${COMPANY_EMAIL_DOMAIN}`}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
           </label>
 

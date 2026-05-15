@@ -14,7 +14,6 @@ import {
   supabase,
 } from "./lib/supabase";
 import type { CategoryKey, Expense } from "./types";
-import { getLoginIdFromEmail } from "./utils/authIdentity";
 import { getPointSummary } from "./utils/calculations";
 import asoosoftLogo from "./assets/asoosoft-logo.svg";
 
@@ -47,9 +46,7 @@ function App() {
   const [localBackupCount, setLocalBackupCount] = useState(() => loadLocalExpenses().length);
 
   const userId = session?.user.id ?? null;
-  const loginId =
-    (session?.user.user_metadata?.loginId as string | undefined) ??
-    getLoginIdFromEmail(session?.user.email ?? "");
+  const userEmail = session?.user.email ?? "";
 
   const pointSummary = useMemo(() => getPointSummary(expenses), [expenses]);
   const selectedCategorySummary = useMemo(
@@ -326,7 +323,7 @@ function App() {
 
     return (
       <div className="header-actions">
-        <span className="header-chip">{loginId}</span>
+        <span className="header-chip">{userEmail}</span>
         <button className="secondary-button" type="button" onClick={signOut}>
           로그아웃
         </button>
