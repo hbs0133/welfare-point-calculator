@@ -34,6 +34,7 @@ const AUTH_COPY: Record<
 
 export function AuthPanel() {
   const [mode, setMode] = useState<AuthMode>("signIn");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -41,6 +42,7 @@ export function AuthPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const copy = AUTH_COPY[mode];
+  const shouldShowName = mode === "signUp";
   const shouldShowPassword = mode !== "resetPassword";
 
   const switchMode = (nextMode: AuthMode) => {
@@ -48,6 +50,7 @@ export function AuthPanel() {
     setMessage("");
     setErrorMessage("");
     setPassword("");
+    setDisplayName("");
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -64,6 +67,11 @@ export function AuthPanel() {
 
     if (shouldShowPassword && !password) {
       setErrorMessage("회사 이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (shouldShowName && !displayName.trim()) {
+      setErrorMessage("이름을 입력해주세요.");
       return;
     }
 
@@ -85,6 +93,9 @@ export function AuthPanel() {
               email: normalizedEmail,
               password,
               options: {
+                data: {
+                  display_name: displayName.trim(),
+                },
                 emailRedirectTo: window.location.origin,
               },
             })
@@ -134,6 +145,19 @@ export function AuthPanel() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {shouldShowName && (
+            <label className="field">
+              <span>이름</span>
+              <input
+                type="text"
+                autoComplete="name"
+                placeholder="예: 홍길동"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+              />
+            </label>
+          )}
+
           <label className="field">
             <span>회사 이메일</span>
             <input

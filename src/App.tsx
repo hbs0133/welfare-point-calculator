@@ -6,6 +6,7 @@ import { CategoryDetail } from "./components/CategoryDetail";
 import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
 import { PasswordUpdatePanel } from "./components/PasswordUpdatePanel";
+import { ProfileNameDialog } from "./components/ProfileNameDialog";
 import { SplitRequestsPanel } from "./components/SplitRequestsPanel";
 import { SummaryCard } from "./components/SummaryCard";
 import { STORAGE_KEY } from "./constants";
@@ -15,15 +16,22 @@ import {
   ProfileRow,
   isSupabaseConfigured,
   mapExpenseRow,
+  mapProfileRow,
   SPLIT_REQUEST_RECIPIENT_SELECT_COLUMNS,
   SPLIT_REQUEST_SELECT_COLUMNS,
   SplitRequestRecipientRow,
   SplitRequestRow,
   supabase,
 } from "./lib/supabase";
-import type { CategoryKey, Expense, ExpenseInput, ReceivedSplitRequest } from "./types";
+import type {
+  CategoryKey,
+  Expense,
+  ExpenseInput,
+  ProfileSummary,
+  ReceivedSplitRequest,
+} from "./types";
 import { getPointSummary } from "./utils/calculations";
-import { isCompanyEmail, normalizeEmail } from "./utils/companyEmail";
+import { getEmailLocalPart, isCompanyEmail, normalizeEmail } from "./utils/companyEmail";
 import asoosoftLogo from "./assets/asoosoft-logo.svg";
 
 const loadLocalExpenses = (): Expense[] => {
@@ -50,6 +58,24 @@ const isPasswordRecoveryUrl = () => {
   return hashParams.get("type") === "recovery" || searchParams.get("type") === "recovery";
 };
 
+const getSessionDisplayName = (activeSession: Session | null) => {
+  const metadata = activeSession?.user.user_metadata;
+  const displayName =
+    typeof metadata?.display_name === "string"
+      ? metadata.display_name
+      : typeof metadata?.name === "string"
+        ? metadata.name
+        : "";
+
+  return displayName.trim();
+};
+
+const shouldAskProfileName = (profile: ProfileRow | null, email: string) => {
+  const displayName = profile?.display_name?.trim() ?? "";
+
+  return !displayName || displayName === getEmailLocalPart(email);
+};
+
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
@@ -62,9 +88,19 @@ function App() {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(isPasswordRecoveryUrl);
   const [splitRequests, setSplitRequests] = useState<ReceivedSplitRequest[]>([]);
   const [isSplitRequestsLoading, setIsSplitRequestsLoading] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
+  const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
+  const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
 
   const userId = session?.user.id ?? null;
   const userEmail = session?.user.email ?? "";
+  const sessionDisplayName = getSessionDisplayName(session);
+  const isProfileNameRequired = Boolean(
+    session &&
+      !isPasswordRecovery &&
+      currentProfile &&
+      shouldAskProfileName(currentProfile, userEmail),
+  );
 
   const pointSummary = useMemo(() => getPointSummary(expenses), [expenses]);
   const selectedCategorySummary = useMemo(
@@ -91,25 +127,80 @@ function App() {
     setExpenses((data ?? []).map(mapExpenseRow));
   }, []);
 
-  const syncProfile = useCallback(async (currentUserId: string, email: string) => {
-    const normalizedEmail = normalizeEmail(email);
+  const syncProfile = useCallback(
+    async (currentUserId: string, email: string, displayName = "") => {
+      const normalizedEmail = normalizeEmail(email);
+      const nextDisplayName = displayName.trim();
 
-    if (!normalizedEmail) {
-      return;
-    }
+      if (!normalizedEmail) {
+        return null;
+      }
 
-    const { error } = await supabase.from("profiles").upsert(
-      {
-        user_id: currentUserId,
-        email: normalizedEmail,
-        display_name: normalizedEmail.split("@")[0],
-      },
-      { onConflict: "user_id" },
-    );
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from("profiles")
+        .select(PROFILE_SELECT_COLUMNS)
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (existingProfile) {
+        const updatePayload: { email: string; display_name?: string } = {
+          email: normalizedEmail,
+        };
+
+        if (nextDisplayName) {
+          updatePayload.display_name = nextDisplayName;
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .update(updatePayload)
+          .eq("user_id", currentUserId)
+          .select(PROFILE_SELECT_COLUMNS)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setCurrentProfile(data as ProfileRow);
+        return data as ProfileRow;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: currentUserId,
+          email: normalizedEmail,
+          display_name: nextDisplayName || null,
+        })
+        .select(PROFILE_SELECT_COLUMNS)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setCurrentProfile(data as ProfileRow);
+      return data as ProfileRow;
+    },
+    [],
+  );
+
+  const fetchProfileDirectory = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(PROFILE_SELECT_COLUMNS)
+      .order("display_name", { ascending: true, nullsFirst: false });
 
     if (error) {
       throw error;
     }
+
+    setProfileDirectory(((data ?? []) as ProfileRow[]).map(mapProfileRow));
   }, []);
 
   const fetchReceivedSplitRequests = useCallback(async (currentUserId: string) => {
@@ -178,11 +269,16 @@ function App() {
             return null;
           }
 
+          const requesterProfile = profileMap.get(request.requester_id);
+          const requesterEmail = requesterProfile?.email ?? "";
+
           return {
             recipientId: recipient.id,
             requestId: request.id,
-            requesterEmail:
-              profileMap.get(request.requester_id)?.email ?? "알 수 없는 요청자",
+            requesterName:
+              requesterProfile?.display_name?.trim() ||
+              (requesterEmail ? getEmailLocalPart(requesterEmail) : "알 수 없는 요청자"),
+            requesterEmail: requesterEmail || "알 수 없는 요청자",
             category: request.category,
             totalAmount: request.total_amount,
             perPersonAmount: request.per_person_amount,
@@ -226,6 +322,8 @@ function App() {
       if (!nextSession) {
         setExpenses([]);
         setSplitRequests([]);
+        setCurrentProfile(null);
+        setProfileDirectory([]);
         setSelectedCategory(null);
         setIsPasswordRecovery(false);
       }
@@ -253,10 +351,12 @@ function App() {
       return;
     }
 
-    syncProfile(userId, userEmail).catch((error) => {
-      setSyncErrorMessage(getSyncErrorMessage("프로필을 동기화하지 못했습니다.", error));
-    });
-  }, [syncProfile, userEmail, userId]);
+    syncProfile(userId, userEmail, sessionDisplayName)
+      .then(() => fetchProfileDirectory())
+      .catch((error) => {
+        setSyncErrorMessage(getSyncErrorMessage("프로필을 동기화하지 못했습니다.", error));
+      });
+  }, [fetchProfileDirectory, sessionDisplayName, syncProfile, userEmail, userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -282,37 +382,39 @@ function App() {
       return false;
     }
 
-    const splitRecipientEmails = Array.from(
-      new Set(
-        (expense.split?.recipientEmails ?? [])
-          .map(normalizeEmail)
-          .filter((email) => email && email !== normalizeEmail(userEmail)),
-      ),
+    const splitRecipients = Array.from(
+      new Map(
+        (expense.split?.recipients ?? [])
+          .filter((recipient) => recipient.userId !== userId)
+          .map((recipient) => [recipient.userId, recipient]),
+      ).values(),
     );
 
-    if (expense.split && splitRecipientEmails.length === 0) {
+    if (expense.split && splitRecipients.length === 0) {
       setSyncMessage("");
       setSyncErrorMessage("1/N 요청을 받을 동료를 입력해주세요.");
       return false;
     }
 
-    if (splitRecipientEmails.length > 0) {
+    if (splitRecipients.length > 0) {
       try {
-        await syncProfile(userId, userEmail);
+        await syncProfile(userId, userEmail, sessionDisplayName);
       } catch (error) {
         setSyncMessage("");
         setSyncErrorMessage(getSyncErrorMessage("프로필을 동기화하지 못했습니다.", error));
         return false;
       }
 
-      const invalidEmails = splitRecipientEmails.filter((email) => !isCompanyEmail(email));
+      const invalidEmails = splitRecipients
+        .map((recipient) => recipient.email)
+        .filter((email) => !isCompanyEmail(email));
       if (invalidEmails.length > 0) {
         setSyncMessage("");
         setSyncErrorMessage("@asoosoft.net 회사 이메일만 요청할 수 있어요.");
         return false;
       }
 
-      const participantCount = splitRecipientEmails.length + 1;
+      const participantCount = splitRecipients.length + 1;
       if (expense.amount % participantCount !== 0) {
         setSyncMessage("");
         setSyncErrorMessage(`${participantCount}명으로 나누어떨어지는 금액을 입력해주세요.`);
@@ -320,10 +422,11 @@ function App() {
       }
 
       const perPersonAmount = expense.amount / participantCount;
+      const recipientIds = splitRecipients.map((recipient) => recipient.userId);
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
         .select(PROFILE_SELECT_COLUMNS)
-        .in("email", splitRecipientEmails);
+        .in("user_id", recipientIds);
 
       if (profilesError) {
         setSyncMessage("");
@@ -332,13 +435,17 @@ function App() {
       }
 
       const profiles = (profileRows ?? []) as ProfileRow[];
-      const foundEmailSet = new Set(profiles.map((profile) => profile.email));
-      const missingEmails = splitRecipientEmails.filter((email) => !foundEmailSet.has(email));
+      const foundUserIdSet = new Set(profiles.map((profile) => profile.user_id));
+      const missingRecipients = splitRecipients.filter(
+        (recipient) => !foundUserIdSet.has(recipient.userId),
+      );
 
-      if (missingEmails.length > 0) {
+      if (missingRecipients.length > 0) {
         setSyncMessage("");
         setSyncErrorMessage(
-          `가입한 동료만 요청할 수 있어요: ${missingEmails.join(", ")}`,
+          `가입한 동료만 요청할 수 있어요: ${missingRecipients
+            .map((recipient) => recipient.displayName)
+            .join(", ")}`,
         );
         return false;
       }
@@ -655,6 +762,44 @@ function App() {
     return true;
   };
 
+  const saveProfileName = async (displayName: string) => {
+    if (!userId || !userEmail) {
+      setSyncErrorMessage("로그인이 필요합니다.");
+      return false;
+    }
+
+    const nextDisplayName = displayName.trim();
+    if (!nextDisplayName) {
+      setSyncErrorMessage("이름을 입력해주세요.");
+      return false;
+    }
+
+    setIsProfileNameSaving(true);
+    try {
+      const profile = await syncProfile(userId, userEmail, nextDisplayName);
+      await supabase.auth.updateUser({
+        data: {
+          display_name: nextDisplayName,
+        },
+      });
+
+      if (profile) {
+        setCurrentProfile(profile);
+      }
+
+      await fetchProfileDirectory();
+      setSyncErrorMessage("");
+      setSyncMessage("이름을 저장했습니다.");
+      return true;
+    } catch (error) {
+      setSyncMessage("");
+      setSyncErrorMessage(getSyncErrorMessage("이름을 저장하지 못했습니다.", error));
+      return false;
+    } finally {
+      setIsProfileNameSaving(false);
+    }
+  };
+
   const migrateLocalExpenses = async () => {
     if (!userId) {
       return;
@@ -712,9 +857,15 @@ function App() {
       return <div className="header-chip">로그인 필요</div>;
     }
 
+    const displayName = currentProfile?.display_name?.trim();
+    const headerLabel =
+      displayName && displayName !== getEmailLocalPart(userEmail)
+        ? `${displayName} · ${userEmail}`
+        : userEmail;
+
     return (
       <div className="header-actions">
-        <span className="header-chip">{userEmail}</span>
+        <span className="header-chip">{headerLabel}</span>
         <button className="secondary-button" type="button" onClick={signOut}>
           로그아웃
         </button>
@@ -786,8 +937,11 @@ function App() {
           <div className="dashboard-layout">
             <aside className="entry-column">
               <ExpenseForm
+                currentUserId={userId ?? ""}
                 currentUserEmail={userEmail}
                 expenses={expenses}
+                profiles={profileDirectory}
+                onRefreshProfiles={fetchProfileDirectory}
                 onAddExpense={addExpense}
               />
             </aside>
@@ -843,6 +997,15 @@ function App() {
               summary={selectedCategorySummary}
               expenses={expenses}
               onClose={() => setSelectedCategory(null)}
+            />
+          )}
+
+          {isProfileNameRequired && (
+            <ProfileNameDialog
+              email={userEmail}
+              initialName={currentProfile?.display_name?.trim() ?? ""}
+              isSaving={isProfileNameSaving}
+              onSave={saveProfileName}
             />
           )}
         </>

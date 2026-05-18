@@ -9,11 +9,14 @@ https://welfare-point-calculator.vercel.app
 ## 주요 기능
 
 - 회사 이메일/비밀번호 기반 로그인
+- 회원가입 시 이름 등록
+- 기존 가입자의 이름 등록 안내
 - 회사 이메일 기반 비밀번호 재설정
 - Supabase DB 저장 및 사용자별 데이터 분리
 - 복지 포인트 사용 내역 추가, 수정, 삭제
+- 사용 내역 추가 전 확인 모달
 - 삭제 전 확인창
-- 동료에게 1/N 차감 요청 보내기
+- 동료 이름, 아이디, 이메일로 1/N 차감 요청 보내기
 - 받은 1/N 요청 자동 확인 및 수락/거절
 - 전체 사용 금액과 잔여 포인트 요약
 - 동호회, 운동, 도서대여/교육/사무용품 항목별 한도 관리
@@ -86,7 +89,9 @@ Supabase 프로젝트에서 `SQL Editor`를 열고 [supabase/schema.sql](supabas
 - 수정일 자동 갱신 트리거
 - 사용자/날짜/요청 상태 기준 인덱스
 
-화면에서는 회사 이메일과 비밀번호를 받습니다. 가입/로그인은 `@asoosoft.net` 회사 이메일만 허용합니다.
+화면에서는 이름, 회사 이메일, 비밀번호를 받습니다. 가입/로그인은 `@asoosoft.net` 회사 이메일만 허용합니다.
+
+기존 가입자는 로그인 후 이름이 비어 있거나 예전 기본값으로 남아 있으면 이름 등록 모달이 표시됩니다. 이 이름은 1/N 요청 대상 검색에 사용됩니다.
 
 Supabase Dashboard의 Authentication 설정에서 이메일 인증을 켜두면, 회원가입 후 회사 메일함으로 전송된 인증 링크를 눌러야 로그인할 수 있습니다.
 
@@ -122,6 +127,7 @@ src/
     ExpenseForm.tsx
     ExpenseList.tsx
     PasswordUpdatePanel.tsx
+    ProfileNameDialog.tsx
     SplitRequestsPanel.tsx
     SummaryCard.tsx
   lib/

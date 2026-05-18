@@ -12,9 +12,15 @@ export type Expense = {
   date: string;
 };
 
+export type ProfileSummary = {
+  userId: string;
+  email: string;
+  displayName: string;
+};
+
 export type ExpenseInput = Omit<Expense, "id"> & {
   split?: {
-    recipientEmails: string[];
+    recipients: ProfileSummary[];
   };
 };
 
@@ -23,6 +29,7 @@ export type SplitRequestStatus = "pending" | "accepted" | "rejected";
 export type ReceivedSplitRequest = {
   recipientId: string;
   requestId: string;
+  requesterName: string;
   requesterEmail: string;
   category: CategoryKey;
   totalAmount: number;

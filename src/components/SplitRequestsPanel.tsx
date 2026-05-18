@@ -58,7 +58,10 @@ export function SplitRequestsPanel({
                   </span>
                   <h3>{formatWon(request.perPersonAmount)} 차감 요청</h3>
                 </div>
-                <strong>{request.requesterEmail}</strong>
+                <strong>
+                  {request.requesterName}
+                  <span>{request.requesterEmail}</span>
+                </strong>
               </div>
 
               <div className="split-request-meta">

@@ -2,6 +2,8 @@ export const COMPANY_EMAIL_DOMAIN = "@asoosoft.net";
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
+export const getEmailLocalPart = (email: string) => normalizeEmail(email).split("@")[0] ?? "";
+
 export const normalizeCompanyEmailInput = (value: string) => {
   const normalizedValue = normalizeEmail(value);
 

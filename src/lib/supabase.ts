@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import type { CategoryKey, Expense, SplitRequestStatus } from "../types";
+import type { CategoryKey, Expense, ProfileSummary, SplitRequestStatus } from "../types";
+import { getEmailLocalPart } from "../utils/companyEmail";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -71,4 +72,10 @@ export const mapExpenseRow = (row: ExpenseRow): Expense => ({
   amount: row.amount,
   memo: row.memo ?? "",
   date: row.date,
+});
+
+export const mapProfileRow = (row: ProfileRow): ProfileSummary => ({
+  userId: row.user_id,
+  email: row.email,
+  displayName: row.display_name?.trim() || getEmailLocalPart(row.email),
 });

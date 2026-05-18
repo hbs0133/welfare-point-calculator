@@ -210,6 +210,9 @@ execute function public.set_updated_at();
 create index if not exists profiles_email_idx
 on public.profiles (email);
 
+create index if not exists profiles_display_name_idx
+on public.profiles (display_name);
+
 create index if not exists split_requests_requester_date_idx
 on public.split_requests (requester_id, date desc);
 

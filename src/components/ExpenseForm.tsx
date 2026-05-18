@@ -1,49 +1,224 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useLayoutEffect, useMemo, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
-import type { CategoryKey, Expense, ExpenseInput } from "../types";
+import type { CategoryKey, Expense, ExpenseInput, ProfileSummary } from "../types";
 import { getProjectedWarnings } from "../utils/calculations";
 import {
+  getEmailLocalPart,
   isCompanyEmail,
   normalizeEmail,
-  parseCompanyEmailList,
 } from "../utils/companyEmail";
 import { formatNumber, formatWon, getTodayISO, parseAmountInput } from "../utils/format";
 import { DatePicker } from "./DatePicker";
 
 type ExpenseFormProps = {
+  currentUserId: string;
   currentUserEmail: string;
   expenses: Expense[];
+  profiles: ProfileSummary[];
+  onRefreshProfiles: () => Promise<void> | void;
   onAddExpense: (expense: ExpenseInput) => boolean | void | Promise<boolean | void>;
 };
 
-export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: ExpenseFormProps) {
+export function ExpenseForm({
+  currentUserId,
+  currentUserEmail,
+  expenses,
+  profiles,
+  onRefreshProfiles,
+  onAddExpense,
+}: ExpenseFormProps) {
   const [category, setCategory] = useState<CategoryKey>("club");
   const [amountInput, setAmountInput] = useState("");
   const [memo, setMemo] = useState("");
   const [date, setDate] = useState(getTodayISO());
-  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
-  const [recipientsInput, setRecipientsInput] = useState("");
+  const [splitRecipients, setSplitRecipients] = useState<ProfileSummary[]>([]);
+  const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
+  const [splitSearchInput, setSplitSearchInput] = useState("");
+  const [splitDialogError, setSplitDialogError] = useState("");
+  const [pendingExpense, setPendingExpense] = useState<ExpenseInput | null>(null);
+  const [isConfirmingAdd, setIsConfirmingAdd] = useState(false);
+  const [confirmErrorMessage, setConfirmErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const amount = parseAmountInput(amountInput);
   const currentEmail = normalizeEmail(currentUserEmail);
-  const recipientEmails = useMemo(
-    () => parseCompanyEmailList(recipientsInput).filter((email) => email !== currentEmail),
-    [currentEmail, recipientsInput],
+  const availableProfiles = useMemo(
+    () =>
+      profiles.filter(
+        (profile) =>
+          profile.userId !== currentUserId && normalizeEmail(profile.email) !== currentEmail,
+      ),
+    [currentEmail, currentUserId, profiles],
   );
-  const participantCount = isSplitEnabled ? recipientEmails.length + 1 : 1;
+  const participantCount = splitRecipients.length > 0 ? splitRecipients.length + 1 : 1;
   const splitAmount =
-    isSplitEnabled && recipientEmails.length > 0 && amount % participantCount === 0
+    splitRecipients.length > 0 && amount % participantCount === 0
       ? amount / participantCount
       : amount;
+  const pendingParticipantCount = pendingExpense?.split
+    ? pendingExpense.split.recipients.length + 1
+    : 1;
+  const pendingPerPersonAmount =
+    pendingExpense && pendingExpense.split
+      ? pendingExpense.amount / pendingParticipantCount
+      : pendingExpense?.amount ?? 0;
+  const splitSummaryText =
+    splitRecipients.length === 0
+      ? "동료 이름, 아이디, 이메일로 요청 대상을 추가할 수 있어요."
+      : amount > 0 && amount % participantCount === 0
+        ? `나 포함 ${participantCount}명 · 1인 ${formatWon(splitAmount)}`
+        : `나 포함 ${participantCount}명 · 나누어떨어지는 금액을 입력해주세요`;
 
   const projectedWarnings = useMemo(
     () => getProjectedWarnings(expenses, category, splitAmount),
     [category, expenses, splitAmount],
   );
 
+  useLayoutEffect(() => {
+    if (!isSplitDialogOpen && !pendingExpense) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isConfirmingAdd) {
+        setIsSplitDialogOpen(false);
+        setPendingExpense(null);
+      }
+    };
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isConfirmingAdd, isSplitDialogOpen, pendingExpense]);
+
+  const openSplitDialog = () => {
+    setSplitDialogError("");
+    setIsSplitDialogOpen(true);
+    Promise.resolve(onRefreshProfiles()).catch(() => {
+      setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
+    });
+  };
+
+  const findProfile = (query: string) => {
+    const keyword = query.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(query);
+
+    if (!keyword) {
+      setSplitDialogError("이름, 아이디, 회사 이메일 중 하나를 입력해주세요.");
+      return null;
+    }
+
+    const selectedIds = new Set(splitRecipients.map((profile) => profile.userId));
+    const candidates = availableProfiles.filter((profile) => !selectedIds.has(profile.userId));
+    const exactMatches = candidates.filter((profile) => {
+      const localPart = getEmailLocalPart(profile.email).toLowerCase();
+      const displayName = profile.displayName.trim().toLowerCase();
+
+      return (
+        normalizeEmail(profile.email) === normalizedEmail ||
+        localPart === keyword ||
+        displayName === keyword
+      );
+    });
+
+    if (exactMatches.length === 1) {
+      return exactMatches[0];
+    }
+
+    if (exactMatches.length > 1) {
+      setSplitDialogError("동명이인이 있어요. 회사 이메일이나 아이디로 더 정확히 입력해주세요.");
+      return null;
+    }
+
+    const partialMatches = candidates.filter((profile) => {
+      const localPart = getEmailLocalPart(profile.email).toLowerCase();
+      const displayName = profile.displayName.trim().toLowerCase();
+
+      return localPart.includes(keyword) || displayName.includes(keyword);
+    });
+
+    if (partialMatches.length === 1) {
+      return partialMatches[0];
+    }
+
+    if (partialMatches.length > 1) {
+      setSplitDialogError("검색 결과가 여러 명이에요. 이름을 더 입력하거나 이메일로 찾아주세요.");
+      return null;
+    }
+
+    setSplitDialogError("가입되어 있고 이름을 등록한 동료만 요청할 수 있어요.");
+    return null;
+  };
+
+  const addSplitRecipient = () => {
+    const nextProfile = findProfile(splitSearchInput);
+
+    if (!nextProfile) {
+      return;
+    }
+
+    setSplitRecipients((currentRecipients) => [...currentRecipients, nextProfile]);
+    setSplitSearchInput("");
+    setSplitDialogError("");
+  };
+
+  const removeSplitRecipient = (userId: string) => {
+    setSplitRecipients((currentRecipients) =>
+      currentRecipients.filter((recipient) => recipient.userId !== userId),
+    );
+  };
+
+  const closeAddConfirmDialog = () => {
+    if (!isConfirmingAdd) {
+      setPendingExpense(null);
+      setConfirmErrorMessage("");
+    }
+  };
+
+  const resetForm = () => {
+    setAmountInput("");
+    setMemo("");
+    setDate(getTodayISO());
+    setSplitRecipients([]);
+    setErrorMessage("");
+  };
+
+  const confirmAddExpense = async () => {
+    if (!pendingExpense) {
+      return;
+    }
+
+    setIsConfirmingAdd(true);
+    setConfirmErrorMessage("");
+    try {
+      const wasSaved = await onAddExpense(pendingExpense);
+
+      if (wasSaved === false) {
+        setConfirmErrorMessage("저장하지 못했습니다. 화면 안내를 확인한 뒤 다시 시도해주세요.");
+        return;
+      }
+
+      setPendingExpense(null);
+      resetForm();
+    } finally {
+      setIsConfirmingAdd(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setErrorMessage("");
 
     if (!amount) {
       setErrorMessage("사용 금액을 입력해주세요.");
@@ -55,13 +230,8 @@ export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: Expens
       return;
     }
 
-    if (isSplitEnabled) {
-      if (recipientEmails.length === 0) {
-        setErrorMessage("1/N 요청을 받을 동료 이메일이나 아이디를 입력해주세요.");
-        return;
-      }
-
-      const invalidEmails = recipientEmails.filter((email) => !isCompanyEmail(email));
+    if (splitRecipients.length > 0) {
+      const invalidEmails = splitRecipients.filter((profile) => !isCompanyEmail(profile.email));
       if (invalidEmails.length > 0) {
         setErrorMessage("@asoosoft.net 회사 이메일만 요청할 수 있어요.");
         return;
@@ -73,28 +243,18 @@ export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: Expens
       }
     }
 
-    const wasSaved = await onAddExpense({
+    setPendingExpense({
       category,
       amount,
       memo: memo.trim(),
       date,
-      split: isSplitEnabled
+      split: splitRecipients.length > 0
         ? {
-            recipientEmails,
+            recipients: splitRecipients,
           }
         : undefined,
     });
-
-    if (wasSaved === false) {
-      return;
-    }
-
-    setAmountInput("");
-    setMemo("");
-    setDate(getTodayISO());
-    setIsSplitEnabled(false);
-    setRecipientsInput("");
-    setErrorMessage("");
+    setConfirmErrorMessage("");
   };
 
   return (
@@ -144,32 +304,34 @@ export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: Expens
           <DatePicker value={date} onChange={setDate} />
         </label>
 
-        <label className="split-toggle">
-          <input
-            type="checkbox"
-            checked={isSplitEnabled}
-            onChange={(event) => setIsSplitEnabled(event.target.checked)}
-          />
-          <span>1/N 요청으로 나눠 차감</span>
-        </label>
+        <div className="split-config-card">
+          <div>
+            <strong>1/N 요청</strong>
+            <p>{splitSummaryText}</p>
+          </div>
+          <div className="split-config-actions">
+            {splitRecipients.length > 0 && (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setSplitRecipients([])}
+              >
+                해제
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={openSplitDialog}>
+              {splitRecipients.length > 0 ? "수정" : "설정"}
+            </button>
+          </div>
+        </div>
 
-        {isSplitEnabled && (
-          <div className="split-panel">
-            <label className="field">
-              <span>요청 받을 동료</span>
-              <textarea
-                rows={3}
-                placeholder="hbs0133 또는 name@asoosoft.net&#10;쉼표, 공백, 줄바꿈으로 여러 명 입력"
-                value={recipientsInput}
-                onChange={(event) => setRecipientsInput(event.target.value)}
-              />
-            </label>
-            <p className="split-helper">
-              나 포함 {participantCount}명
-              {amount > 0 && recipientEmails.length > 0 && amount % participantCount === 0
-                ? ` · 1인 ${formatWon(splitAmount)}`
-                : " · 나누어떨어지는 금액을 입력해주세요"}
-            </p>
+        {splitRecipients.length > 0 && (
+          <div className="split-selected-list" aria-label="선택된 1/N 요청 대상">
+            {splitRecipients.map((recipient) => (
+              <span className="split-recipient-chip" key={recipient.userId}>
+                {recipient.displayName}
+              </span>
+            ))}
           </div>
         )}
 
@@ -187,6 +349,166 @@ export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: Expens
           <p className="warning-text">추가 후 선택 항목 한도를 초과합니다.</p>
         )}
       </div>
+
+      {isSplitDialogOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={() => setIsSplitDialogOpen(false)}
+        >
+          <section
+            className="confirm-dialog split-dialog"
+            role="dialog"
+            aria-label="1/N 요청 대상 설정"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="confirm-dialog__header">
+              <h2>1/N 요청 대상 설정</h2>
+              <p>동료 이름, 아이디, 회사 이메일 중 하나를 입력해 요청 대상을 추가하세요.</p>
+            </div>
+
+            <div className="split-search-row">
+              <input
+                type="text"
+                placeholder="예: 홍길동, hbs0133, name@asoosoft.net"
+                value={splitSearchInput}
+                onChange={(event) => setSplitSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addSplitRecipient();
+                  }
+                }}
+                autoFocus
+              />
+              <button className="secondary-button" type="button" onClick={addSplitRecipient}>
+                추가하기
+              </button>
+            </div>
+
+            {splitDialogError && <p className="warning-text">{splitDialogError}</p>}
+
+            <div className="split-dialog-list">
+              {splitRecipients.length === 0 ? (
+                <div className="empty-state">아직 추가한 동료가 없습니다.</div>
+              ) : (
+                splitRecipients.map((recipient) => (
+                  <div className="split-dialog-item" key={recipient.userId}>
+                    <div>
+                      <strong>{recipient.displayName}</strong>
+                      <span>{recipient.email}</span>
+                    </div>
+                    <button
+                      className="mini-button"
+                      type="button"
+                      onClick={() => removeSplitRecipient(recipient.userId)}
+                    >
+                      제거
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="split-dialog-summary">
+              <span>나 포함 {participantCount}명</span>
+              <strong>
+                {amount > 0 && splitRecipients.length > 0 && amount % participantCount === 0
+                  ? `1인 ${formatWon(splitAmount)}`
+                  : "금액 입력 후 1인 금액 확인"}
+              </strong>
+            </div>
+
+            {confirmErrorMessage && <p className="warning-text">{confirmErrorMessage}</p>}
+
+            <div className="confirm-dialog__actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setIsSplitDialogOpen(false)}
+              >
+                확인
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {pendingExpense && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeAddConfirmDialog}>
+          <section
+            className="confirm-dialog"
+            role="dialog"
+            aria-label="사용 내역 추가 확인"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="confirm-dialog__header">
+              <h2>사용 내역을 추가할까요?</h2>
+              <p>아래 내용으로 포인트 사용 내역을 저장합니다.</p>
+            </div>
+
+            <div className="confirm-dialog__summary">
+              <div>
+                <span>날짜</span>
+                <strong>{pendingExpense.date}</strong>
+              </div>
+              <div>
+                <span>항목</span>
+                <strong>{CATEGORY_LABELS[pendingExpense.category]}</strong>
+              </div>
+              <div>
+                <span>{pendingExpense.split ? "총 금액" : "금액"}</span>
+                <strong>{formatWon(pendingExpense.amount)}</strong>
+              </div>
+              {pendingExpense.split && (
+                <>
+                  <div>
+                    <span>요청 대상</span>
+                    <strong>
+                      {pendingExpense.split.recipients
+                        .map((recipient) => recipient.displayName)
+                        .join(", ")}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>1인 금액</span>
+                    <strong>{formatWon(pendingPerPersonAmount)}</strong>
+                  </div>
+                  <div>
+                    <span>본인 차감</span>
+                    <strong>{formatWon(pendingPerPersonAmount)}</strong>
+                  </div>
+                </>
+              )}
+              <div>
+                <span>메모</span>
+                <strong>{pendingExpense.memo || "-"}</strong>
+              </div>
+            </div>
+
+            <div className="confirm-dialog__actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={closeAddConfirmDialog}
+                disabled={isConfirmingAdd}
+              >
+                취소
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={confirmAddExpense}
+                disabled={isConfirmingAdd}
+              >
+                {isConfirmingAdd ? "추가 중" : "추가"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }

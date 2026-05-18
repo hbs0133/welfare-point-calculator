@@ -14,6 +14,13 @@ export function SummaryCard({
   totalUsageRate,
   isTotalExceeded,
 }: SummaryCardProps) {
+  const usageTone =
+    isTotalExceeded || totalUsageRate >= 90
+      ? "danger"
+      : totalUsageRate >= 70
+        ? "warning"
+        : "theme";
+
   return (
     <section className={`summary-card ${isTotalExceeded ? "is-danger" : ""}`}>
       <div className="summary-card__headline">
@@ -42,11 +49,11 @@ export function SummaryCard({
       <div className="progress-wrap">
         <div className="progress-meta">
           <span>전체 사용률</span>
-          <strong>{Math.round(totalUsageRate)}%</strong>
+          <strong className={`usage-rate-text ${usageTone}`}>{Math.round(totalUsageRate)}%</strong>
         </div>
         <div className="progress-track">
           <div
-            className={`progress-fill ${isTotalExceeded ? "danger" : ""}`}
+            className={`progress-fill ${usageTone}`}
             style={{ width: `${totalUsageRate}%` }}
           />
         </div>
