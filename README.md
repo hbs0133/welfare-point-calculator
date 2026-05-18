@@ -13,6 +13,8 @@ https://welfare-point-calculator.vercel.app
 - Supabase DB 저장 및 사용자별 데이터 분리
 - 복지 포인트 사용 내역 추가, 수정, 삭제
 - 삭제 전 확인창
+- 동료에게 1/N 차감 요청 보내기
+- 받은 1/N 요청 자동 확인 및 수락/거절
 - 전체 사용 금액과 잔여 포인트 요약
 - 동호회, 운동, 도서대여/교육/사무용품 항목별 한도 관리
 - 항목 카드 클릭 시 상세 모달
@@ -77,9 +79,12 @@ Supabase 프로젝트에서 `SQL Editor`를 열고 [supabase/schema.sql](supabas
 이 스크립트는 다음을 만듭니다.
 
 - `public.expenses` 테이블
+- `public.profiles` 테이블
+- `public.split_requests` 테이블
+- `public.split_request_recipients` 테이블
 - 사용자별 접근을 제한하는 RLS 정책
 - 수정일 자동 갱신 트리거
-- 사용자/날짜 기준 인덱스
+- 사용자/날짜/요청 상태 기준 인덱스
 
 화면에서는 회사 이메일과 비밀번호를 받습니다. 가입/로그인은 `@asoosoft.net` 회사 이메일만 허용합니다.
 
@@ -117,11 +122,13 @@ src/
     ExpenseForm.tsx
     ExpenseList.tsx
     PasswordUpdatePanel.tsx
+    SplitRequestsPanel.tsx
     SummaryCard.tsx
   lib/
     supabase.ts
   utils/
     calculations.ts
+    companyEmail.ts
     csv.ts
     expenseId.ts
     format.ts

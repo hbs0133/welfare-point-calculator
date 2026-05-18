@@ -1,10 +1,8 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { COMPANY_EMAIL_DOMAIN, isCompanyEmail, normalizeEmail } from "../utils/companyEmail";
 
 type AuthMode = "signIn" | "signUp" | "resetPassword";
-
-const COMPANY_EMAIL_DOMAIN = "@asoosoft.net";
-
 const AUTH_COPY: Record<
   AuthMode,
   {
@@ -22,7 +20,7 @@ const AUTH_COPY: Record<
   },
   signUp: {
     title: "계정 만들기",
-    description: "처음 사용하는 동료라면 회사 이메일로 계정을 만들 수 있어요.",
+    description: "처음 사용하는 아수인이라면 회사 이메일로 계정을 만들 수 있어요.",
     button: "가입하기",
     success: "인증 메일을 보냈습니다. 회사 메일함에서 인증을 완료해주세요.",
   },
@@ -33,10 +31,6 @@ const AUTH_COPY: Record<
     success: "비밀번호 재설정 메일을 보냈습니다. 회사 메일함을 확인해주세요.",
   },
 };
-
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
-const isCompanyEmail = (email: string) => email.endsWith(COMPANY_EMAIL_DOMAIN);
 
 export function AuthPanel() {
   const [mode, setMode] = useState<AuthMode>("signIn");

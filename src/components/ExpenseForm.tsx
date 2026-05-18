@@ -1,27 +1,45 @@
 import { FormEvent, useMemo, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
-import type { CategoryKey, Expense } from "../types";
+import type { CategoryKey, Expense, ExpenseInput } from "../types";
 import { getProjectedWarnings } from "../utils/calculations";
-import { formatNumber, getTodayISO, parseAmountInput } from "../utils/format";
+import {
+  isCompanyEmail,
+  normalizeEmail,
+  parseCompanyEmailList,
+} from "../utils/companyEmail";
+import { formatNumber, formatWon, getTodayISO, parseAmountInput } from "../utils/format";
 import { DatePicker } from "./DatePicker";
 
 type ExpenseFormProps = {
+  currentUserEmail: string;
   expenses: Expense[];
-  onAddExpense: (expense: Omit<Expense, "id">) => boolean | void | Promise<boolean | void>;
+  onAddExpense: (expense: ExpenseInput) => boolean | void | Promise<boolean | void>;
 };
 
-export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
+export function ExpenseForm({ currentUserEmail, expenses, onAddExpense }: ExpenseFormProps) {
   const [category, setCategory] = useState<CategoryKey>("club");
   const [amountInput, setAmountInput] = useState("");
   const [memo, setMemo] = useState("");
   const [date, setDate] = useState(getTodayISO());
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
+  const [recipientsInput, setRecipientsInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const amount = parseAmountInput(amountInput);
+  const currentEmail = normalizeEmail(currentUserEmail);
+  const recipientEmails = useMemo(
+    () => parseCompanyEmailList(recipientsInput).filter((email) => email !== currentEmail),
+    [currentEmail, recipientsInput],
+  );
+  const participantCount = isSplitEnabled ? recipientEmails.length + 1 : 1;
+  const splitAmount =
+    isSplitEnabled && recipientEmails.length > 0 && amount % participantCount === 0
+      ? amount / participantCount
+      : amount;
 
   const projectedWarnings = useMemo(
-    () => getProjectedWarnings(expenses, category, amount),
-    [amount, category, expenses],
+    () => getProjectedWarnings(expenses, category, splitAmount),
+    [category, expenses, splitAmount],
   );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -37,11 +55,34 @@ export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
       return;
     }
 
+    if (isSplitEnabled) {
+      if (recipientEmails.length === 0) {
+        setErrorMessage("1/N 요청을 받을 동료 이메일이나 아이디를 입력해주세요.");
+        return;
+      }
+
+      const invalidEmails = recipientEmails.filter((email) => !isCompanyEmail(email));
+      if (invalidEmails.length > 0) {
+        setErrorMessage("@asoosoft.net 회사 이메일만 요청할 수 있어요.");
+        return;
+      }
+
+      if (amount % participantCount !== 0) {
+        setErrorMessage(`${participantCount}명으로 나누어떨어지는 금액을 입력해주세요.`);
+        return;
+      }
+    }
+
     const wasSaved = await onAddExpense({
       category,
       amount,
       memo: memo.trim(),
       date,
+      split: isSplitEnabled
+        ? {
+            recipientEmails,
+          }
+        : undefined,
     });
 
     if (wasSaved === false) {
@@ -51,6 +92,8 @@ export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
     setAmountInput("");
     setMemo("");
     setDate(getTodayISO());
+    setIsSplitEnabled(false);
+    setRecipientsInput("");
     setErrorMessage("");
   };
 
@@ -100,6 +143,35 @@ export function ExpenseForm({ expenses, onAddExpense }: ExpenseFormProps) {
           <span>날짜</span>
           <DatePicker value={date} onChange={setDate} />
         </label>
+
+        <label className="split-toggle">
+          <input
+            type="checkbox"
+            checked={isSplitEnabled}
+            onChange={(event) => setIsSplitEnabled(event.target.checked)}
+          />
+          <span>1/N 요청으로 나눠 차감</span>
+        </label>
+
+        {isSplitEnabled && (
+          <div className="split-panel">
+            <label className="field">
+              <span>요청 받을 동료</span>
+              <textarea
+                rows={3}
+                placeholder="hbs0133 또는 name@asoosoft.net&#10;쉼표, 공백, 줄바꿈으로 여러 명 입력"
+                value={recipientsInput}
+                onChange={(event) => setRecipientsInput(event.target.value)}
+              />
+            </label>
+            <p className="split-helper">
+              나 포함 {participantCount}명
+              {amount > 0 && recipientEmails.length > 0 && amount % participantCount === 0
+                ? ` · 1인 ${formatWon(splitAmount)}`
+                : " · 나누어떨어지는 금액을 입력해주세요"}
+            </p>
+          </div>
+        )}
 
         <button className="primary-button" type="submit">
           + 추가

@@ -514,6 +514,76 @@ button:disabled {
   margin-top: 16px;
 }
 
+.split-requests-panel {
+  margin-top: 16px;
+}
+
+.split-request-list {
+  display: grid;
+  gap: 10px;
+}
+
+.split-request-item {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.split-request-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.split-request-main h3 {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.split-request-main > strong {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.split-request-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.split-request-meta span {
+  min-height: 26px;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #4e5968;
+  padding: 5px 9px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.split-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.split-request-actions button {
+  min-width: 72px;
+}
+
+.split-request-accept {
+  min-height: 40px;
+}
+
 .notice-panel {
   display: flex;
   align-items: center;
@@ -723,6 +793,7 @@ button:disabled {
 
 .expense-form input,
 .expense-form select,
+.expense-form textarea,
 .auth-form input {
   width: 100%;
   min-height: 46px;
@@ -732,6 +803,7 @@ button:disabled {
   color: var(--ink);
   padding: 0 13px;
   outline: none;
+  resize: vertical;
   transition:
     border-color 140ms ease,
     box-shadow 140ms ease,
@@ -739,21 +811,60 @@ button:disabled {
 }
 
 .expense-form input::placeholder,
+.expense-form textarea::placeholder,
 .auth-form input::placeholder {
   color: #b0b8c1;
 }
 
 .expense-form input:hover,
 .expense-form select:hover,
+.expense-form textarea:hover,
 .auth-form input:hover {
   border-color: var(--line-strong);
 }
 
 .expense-form input:focus,
 .expense-form select:focus,
+.expense-form textarea:focus,
 .auth-form input:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.16);
+}
+
+.expense-form textarea {
+  min-height: 86px;
+  padding: 12px 13px;
+  line-height: 1.45;
+}
+
+.split-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.split-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--blue);
+}
+
+.split-panel {
+  display: grid;
+  gap: 9px;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 13px;
+}
+
+.split-helper {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .date-picker {
@@ -1345,6 +1456,18 @@ button:disabled {
 
   .notice-panel {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .split-request-main {
+    flex-direction: column;
+  }
+
+  .split-request-main > strong {
+    text-align: left;
+  }
+
+  .split-request-actions {
     flex-direction: column;
   }
 
