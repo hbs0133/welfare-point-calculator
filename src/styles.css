@@ -134,9 +134,18 @@ button:disabled {
   box-shadow: var(--shadow-soft);
 }
 
+button.header-chip {
+  font: inherit;
+  cursor: pointer;
+}
+
 .header-chip.request-badge {
   background: #fff4d6;
   color: #b86b00;
+}
+
+.header-chip.request-badge:hover {
+  background: #ffedbf;
 }
 
 .header-actions {
@@ -543,8 +552,74 @@ button:disabled {
   margin-top: 16px;
 }
 
-.split-requests-panel {
+.split-request-center {
+  scroll-margin-top: 18px;
+}
+
+.split-request-center .section-title {
+  margin-bottom: 12px;
+}
+
+.split-request-center__header .secondary-button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
+.request-center-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.request-center-summary span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #4e5968;
+  padding: 0 11px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.request-center-summary span.has-alert {
+  background: #fff4d6;
+  color: #b86b00;
+}
+
+.request-center-body {
+  display: grid;
+  gap: 16px;
   margin-top: 16px;
+}
+
+.request-subsection {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.request-subsection__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.request-subsection__title h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.request-subsection__title span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .split-request-list {
@@ -557,7 +632,7 @@ button:disabled {
   gap: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #ffffff;
+  background: #fbfcfd;
   padding: 14px;
 }
 

@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthPanel } from "./components/AuthPanel";
 import { CategoryCard } from "./components/CategoryCard";
 import { CategoryDetail } from "./components/CategoryDetail";
@@ -7,8 +7,7 @@ import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
 import { PasswordUpdatePanel } from "./components/PasswordUpdatePanel";
 import { ProfileNameDialog } from "./components/ProfileNameDialog";
-import { SentSplitRequestsPanel } from "./components/SentSplitRequestsPanel";
-import { SplitRequestsPanel } from "./components/SplitRequestsPanel";
+import { SplitRequestCenter } from "./components/SplitRequestCenter";
 import { SummaryCard } from "./components/SummaryCard";
 import { STORAGE_KEY } from "./constants";
 import {
@@ -96,6 +95,8 @@ function App() {
   const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
   const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
+  const [isSplitRequestCenterExpanded, setIsSplitRequestCenterExpanded] = useState(false);
+  const splitRequestCenterRef = useRef<HTMLDivElement>(null);
 
   const userId = session?.user.id ?? null;
   const userEmail = session?.user.email ?? "";
@@ -113,6 +114,18 @@ function App() {
       pointSummary.categorySummaries.find((summary) => summary.key === selectedCategory) ?? null,
     [pointSummary.categorySummaries, selectedCategory],
   );
+
+  const pendingRequestCount = splitRequests.length;
+
+  const focusSplitRequestCenter = () => {
+    setIsSplitRequestCenterExpanded(true);
+    window.requestAnimationFrame(() => {
+      splitRequestCenterRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   const fetchExpenses = useCallback(async (currentUserId: string) => {
     setIsExpensesLoading(true);
@@ -1079,8 +1092,15 @@ function App() {
     return (
       <div className="header-actions">
         <span className="header-chip">{headerLabel}</span>
-        {splitRequests.length > 0 && (
-          <span className="header-chip request-badge">1/N 요청 {splitRequests.length}</span>
+        {pendingRequestCount > 0 && (
+          <button
+            className="header-chip request-badge"
+            type="button"
+            onClick={focusSplitRequestCenter}
+            title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
+          >
+            1/N 요청 {pendingRequestCount}건
+          </button>
         )}
         <button className="secondary-button" type="button" onClick={signOut}>
           로그아웃
@@ -1184,21 +1204,24 @@ function App() {
                   />
                 ))}
               </section>
+
+              <div ref={splitRequestCenterRef}>
+                <SplitRequestCenter
+                  isExpanded={isSplitRequestCenterExpanded}
+                  isReceivedLoading={isSplitRequestsLoading}
+                  isSentLoading={isSentSplitRequestsLoading}
+                  receivedRequests={splitRequests}
+                  sentRequests={sentSplitRequests}
+                  onAccept={acceptSplitRequest}
+                  onCancel={cancelSentSplitRequest}
+                  onReject={rejectSplitRequest}
+                  onToggle={() =>
+                    setIsSplitRequestCenterExpanded((isExpanded) => !isExpanded)
+                  }
+                />
+              </div>
             </section>
           </div>
-
-          <SplitRequestsPanel
-            isLoading={isSplitRequestsLoading}
-            requests={splitRequests}
-            onAccept={acceptSplitRequest}
-            onReject={rejectSplitRequest}
-          />
-
-          <SentSplitRequestsPanel
-            isLoading={isSentSplitRequestsLoading}
-            requests={sentSplitRequests}
-            onCancel={cancelSentSplitRequest}
-          />
 
           <section className="history-section">
             {isExpensesLoading ? (
