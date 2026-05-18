@@ -134,6 +134,11 @@ button:disabled {
   box-shadow: var(--shadow-soft);
 }
 
+.header-chip.request-badge {
+  background: #fff4d6;
+  color: #b86b00;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -831,7 +836,8 @@ button:disabled {
 .expense-form textarea,
 .auth-form input,
 .profile-dialog input,
-.split-search-row input {
+.split-search-row input,
+.directory-search-input {
   width: 100%;
   min-height: 46px;
   border: 1px solid var(--line);
@@ -851,7 +857,8 @@ button:disabled {
 .expense-form textarea::placeholder,
 .auth-form input::placeholder,
 .profile-dialog input::placeholder,
-.split-search-row input::placeholder {
+.split-search-row input::placeholder,
+.directory-search-input::placeholder {
   color: #b0b8c1;
 }
 
@@ -860,7 +867,8 @@ button:disabled {
 .expense-form textarea:hover,
 .auth-form input:hover,
 .profile-dialog input:hover,
-.split-search-row input:hover {
+.split-search-row input:hover,
+.directory-search-input:hover {
   border-color: var(--line-strong);
 }
 
@@ -869,7 +877,8 @@ button:disabled {
 .expense-form textarea:focus,
 .auth-form input:focus,
 .profile-dialog input:focus,
-.split-search-row input:focus {
+.split-search-row input:focus,
+.directory-search-input:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.16);
 }
@@ -976,7 +985,7 @@ button:disabled {
 
 .split-search-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   margin-top: 18px;
 }
@@ -1046,6 +1055,147 @@ button:disabled {
 
 .split-dialog .confirm-dialog__actions {
   margin-top: 16px;
+}
+
+.nested-modal-backdrop {
+  z-index: 70;
+  background: rgba(25, 31, 40, 0.45);
+}
+
+.directory-dialog {
+  width: min(520px, 100%);
+}
+
+.directory-search-input {
+  margin-top: 18px;
+}
+
+.directory-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(420px, 48vh);
+  overflow-y: auto;
+  margin: 16px 0;
+  padding-right: 4px;
+}
+
+.directory-list .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 112px;
+}
+
+.directory-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.directory-item:hover {
+  border-color: var(--line-strong);
+  background: #fbfcfd;
+}
+
+.directory-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue);
+}
+
+.directory-item span,
+.directory-item strong,
+.directory-item small {
+  display: block;
+}
+
+.directory-item strong {
+  color: var(--ink);
+  font-size: 0.93rem;
+  font-weight: 650;
+}
+
+.directory-item small {
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.directory-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.directory-footer > span {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.directory-footer .confirm-dialog__actions {
+  margin-top: 0;
+}
+
+.sent-recipient-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sent-recipient-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 11px 12px;
+}
+
+.sent-recipient-item strong,
+.sent-recipient-item span {
+  display: block;
+}
+
+.sent-recipient-item strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.sent-recipient-item div > span {
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
+.request-status {
+  min-width: 48px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.request-status.pending {
+  background: var(--blue-soft);
+  color: var(--blue-dark);
+}
+
+.request-status.accepted {
+  background: #e9fbf1;
+  color: #008a61;
+}
+
+.request-status.rejected {
+  background: #fee2e2;
+  color: var(--danger-dark);
 }
 
 .profile-dialog__form {
@@ -1675,6 +1825,16 @@ button:disabled {
 
   .split-search-row {
     grid-template-columns: 1fr;
+  }
+
+  .directory-footer,
+  .sent-recipient-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .directory-footer .confirm-dialog__actions {
+    width: 100%;
   }
 
   .summary-card,

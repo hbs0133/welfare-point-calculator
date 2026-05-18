@@ -40,6 +40,26 @@ export type ReceivedSplitRequest = {
   createdAt: string;
 };
 
+export type SentSplitRecipient = ProfileSummary & {
+  recipientRowId: string;
+  amount: number;
+  status: SplitRequestStatus;
+  respondedAt: string | null;
+};
+
+export type SentSplitRequest = {
+  requestId: string;
+  category: CategoryKey;
+  totalAmount: number;
+  perPersonAmount: number;
+  participantCount: number;
+  memo: string;
+  date: string;
+  requesterExpenseId: string | null;
+  createdAt: string;
+  recipients: SentSplitRecipient[];
+};
+
 export type CategorySummary = {
   key: CategoryKey;
   label: string;

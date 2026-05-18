@@ -33,7 +33,10 @@ export function ExpenseForm({
   const [date, setDate] = useState(getTodayISO());
   const [splitRecipients, setSplitRecipients] = useState<ProfileSummary[]>([]);
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
+  const [isDirectoryDialogOpen, setIsDirectoryDialogOpen] = useState(false);
   const [splitSearchInput, setSplitSearchInput] = useState("");
+  const [directorySearchInput, setDirectorySearchInput] = useState("");
+  const [directorySelectedIds, setDirectorySelectedIds] = useState<string[]>([]);
   const [splitDialogError, setSplitDialogError] = useState("");
   const [pendingExpense, setPendingExpense] = useState<ExpenseInput | null>(null);
   const [isConfirmingAdd, setIsConfirmingAdd] = useState(false);
@@ -68,6 +71,25 @@ export function ExpenseForm({
       : amount > 0 && amount % participantCount === 0
         ? `나 포함 ${participantCount}명 · 1인 ${formatWon(splitAmount)}`
         : `나 포함 ${participantCount}명 · 나누어떨어지는 금액을 입력해주세요`;
+  const directoryProfiles = useMemo(() => {
+    const keyword = directorySearchInput.trim().toLowerCase();
+
+    if (!keyword) {
+      return availableProfiles;
+    }
+
+    return availableProfiles.filter((profile) => {
+      const localPart = getEmailLocalPart(profile.email).toLowerCase();
+      const displayName = profile.displayName.trim().toLowerCase();
+      const email = normalizeEmail(profile.email);
+
+      return (
+        displayName.includes(keyword) ||
+        localPart.includes(keyword) ||
+        email.includes(keyword)
+      );
+    });
+  }, [availableProfiles, directorySearchInput]);
 
   const projectedWarnings = useMemo(
     () => getProjectedWarnings(expenses, category, splitAmount),
@@ -81,6 +103,11 @@ export function ExpenseForm({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isConfirmingAdd) {
+        if (isDirectoryDialogOpen) {
+          setIsDirectoryDialogOpen(false);
+          return;
+        }
+
         setIsSplitDialogOpen(false);
         setPendingExpense(null);
       }
@@ -100,11 +127,20 @@ export function ExpenseForm({
       document.body.style.paddingRight = originalPaddingRight;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isConfirmingAdd, isSplitDialogOpen, pendingExpense]);
+  }, [isConfirmingAdd, isDirectoryDialogOpen, isSplitDialogOpen, pendingExpense]);
 
   const openSplitDialog = () => {
     setSplitDialogError("");
     setIsSplitDialogOpen(true);
+    Promise.resolve(onRefreshProfiles()).catch(() => {
+      setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
+    });
+  };
+
+  const openDirectoryDialog = () => {
+    setDirectorySelectedIds(splitRecipients.map((recipient) => recipient.userId));
+    setDirectorySearchInput("");
+    setIsDirectoryDialogOpen(true);
     Promise.resolve(onRefreshProfiles()).catch(() => {
       setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
     });
@@ -177,6 +213,21 @@ export function ExpenseForm({
     setSplitRecipients((currentRecipients) =>
       currentRecipients.filter((recipient) => recipient.userId !== userId),
     );
+  };
+
+  const toggleDirectoryRecipient = (userId: string) => {
+    setDirectorySelectedIds((currentIds) =>
+      currentIds.includes(userId)
+        ? currentIds.filter((currentId) => currentId !== userId)
+        : [...currentIds, userId],
+    );
+  };
+
+  const applyDirectorySelection = () => {
+    const selectedIdSet = new Set(directorySelectedIds);
+    setSplitRecipients(availableProfiles.filter((profile) => selectedIdSet.has(profile.userId)));
+    setIsDirectoryDialogOpen(false);
+    setSplitDialogError("");
   };
 
   const closeAddConfirmDialog = () => {
@@ -385,6 +436,9 @@ export function ExpenseForm({
               <button className="secondary-button" type="button" onClick={addSplitRecipient}>
                 추가하기
               </button>
+              <button className="secondary-button" type="button" onClick={openDirectoryDialog}>
+                목록 보기
+              </button>
             </div>
 
             {splitDialogError && <p className="warning-text">{splitDialogError}</p>}
@@ -431,6 +485,72 @@ export function ExpenseForm({
                 확인
               </button>
             </div>
+
+            {isDirectoryDialogOpen && (
+              <div
+                className="modal-backdrop nested-modal-backdrop"
+                role="presentation"
+                onMouseDown={() => setIsDirectoryDialogOpen(false)}
+              >
+                <section
+                  className="confirm-dialog directory-dialog"
+                  role="dialog"
+                  aria-label="가입된 동료 목록"
+                  aria-modal="true"
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <div className="confirm-dialog__header">
+                    <h2>가입된 동료 목록</h2>
+                    <p>체크한 동료를 1/N 요청 대상에 추가합니다.</p>
+                  </div>
+
+                  <input
+                    className="directory-search-input"
+                    type="text"
+                    placeholder="이름, 아이디, 이메일 검색"
+                    value={directorySearchInput}
+                    onChange={(event) => setDirectorySearchInput(event.target.value)}
+                    autoFocus
+                  />
+
+                  <div className="directory-list">
+                    {directoryProfiles.length === 0 ? (
+                      <div className="empty-state">조건에 맞는 동료가 없습니다.</div>
+                    ) : (
+                      directoryProfiles.map((profile) => (
+                        <label className="directory-item" key={profile.userId}>
+                          <input
+                            type="checkbox"
+                            checked={directorySelectedIds.includes(profile.userId)}
+                            onChange={() => toggleDirectoryRecipient(profile.userId)}
+                          />
+                          <span>
+                            <strong>{profile.displayName}</strong>
+                            <small>{profile.email}</small>
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="directory-footer">
+                    <span>{directorySelectedIds.length}명 선택</span>
+                    <div className="confirm-dialog__actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => setIsDirectoryDialogOpen(false)}
+                      >
+                        취소
+                      </button>
+                      <button className="primary-button" type="button" onClick={applyDirectorySelection}>
+                        추가
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
           </section>
         </div>
       )}

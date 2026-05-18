@@ -100,6 +100,7 @@ execute function public.set_updated_at();
 create table if not exists public.split_requests (
   id uuid primary key default gen_random_uuid(),
   requester_id uuid not null references public.profiles(user_id) on delete cascade,
+  requester_expense_id uuid references public.expenses(id) on delete set null,
   category text not null check (
     category in ('club', 'exercise', 'bookEducationOffice')
   ),
@@ -111,6 +112,9 @@ create table if not exists public.split_requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.split_requests
+add column if not exists requester_expense_id uuid references public.expenses(id) on delete set null;
 
 create table if not exists public.split_request_recipients (
   id uuid primary key default gen_random_uuid(),
@@ -174,13 +178,22 @@ for delete
 using (requester_id = auth.uid());
 
 drop policy if exists "Users can read own split recipients" on public.split_request_recipients;
+drop policy if exists "Users can read related split recipients" on public.split_request_recipients;
 drop policy if exists "Requesters can insert split recipients" on public.split_request_recipients;
 drop policy if exists "Recipients can update own split recipient" on public.split_request_recipients;
 
-create policy "Users can read own split recipients"
+create policy "Users can read related split recipients"
 on public.split_request_recipients
 for select
-using (recipient_id = auth.uid());
+using (
+  recipient_id = auth.uid()
+  or exists (
+    select 1
+    from public.split_requests
+    where id = request_id
+      and requester_id = auth.uid()
+  )
+);
 
 create policy "Requesters can insert split recipients"
 on public.split_request_recipients
@@ -233,5 +246,19 @@ begin
       and tablename = 'split_request_recipients'
   ) then
     alter publication supabase_realtime add table public.split_request_recipients;
+  end if;
+
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'split_requests'
+  ) then
+    alter publication supabase_realtime add table public.split_requests;
   end if;
 end $$;

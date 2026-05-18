@@ -7,6 +7,7 @@ import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
 import { PasswordUpdatePanel } from "./components/PasswordUpdatePanel";
 import { ProfileNameDialog } from "./components/ProfileNameDialog";
+import { SentSplitRequestsPanel } from "./components/SentSplitRequestsPanel";
 import { SplitRequestsPanel } from "./components/SplitRequestsPanel";
 import { SummaryCard } from "./components/SummaryCard";
 import { STORAGE_KEY } from "./constants";
@@ -29,6 +30,8 @@ import type {
   ExpenseInput,
   ProfileSummary,
   ReceivedSplitRequest,
+  SentSplitRequest,
+  SentSplitRecipient,
 } from "./types";
 import { getPointSummary } from "./utils/calculations";
 import { getEmailLocalPart, isCompanyEmail, normalizeEmail } from "./utils/companyEmail";
@@ -88,6 +91,8 @@ function App() {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(isPasswordRecoveryUrl);
   const [splitRequests, setSplitRequests] = useState<ReceivedSplitRequest[]>([]);
   const [isSplitRequestsLoading, setIsSplitRequestsLoading] = useState(false);
+  const [sentSplitRequests, setSentSplitRequests] = useState<SentSplitRequest[]>([]);
+  const [isSentSplitRequestsLoading, setIsSentSplitRequestsLoading] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
   const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
@@ -299,6 +304,113 @@ function App() {
     [],
   );
 
+  const fetchSentSplitRequests = useCallback(
+    async (currentUserId: string, options: { silent?: boolean } = {}) => {
+      const shouldShowLoading = !options.silent;
+
+      if (shouldShowLoading) {
+        setIsSentSplitRequestsLoading(true);
+      }
+
+      try {
+        const { data: requestRows, error: requestsError } = await supabase
+          .from("split_requests")
+          .select(SPLIT_REQUEST_SELECT_COLUMNS)
+          .eq("requester_id", currentUserId)
+          .order("created_at", { ascending: false });
+
+        if (requestsError) {
+          throw requestsError;
+        }
+
+        const requests = (requestRows ?? []) as SplitRequestRow[];
+        const requestIds = requests.map((request) => request.id);
+
+        if (requestIds.length === 0) {
+          setSentSplitRequests([]);
+          return;
+        }
+
+        const { data: recipientRows, error: recipientsError } = await supabase
+          .from("split_request_recipients")
+          .select(SPLIT_REQUEST_RECIPIENT_SELECT_COLUMNS)
+          .in("request_id", requestIds)
+          .order("created_at", { ascending: true });
+
+        if (recipientsError) {
+          throw recipientsError;
+        }
+
+        const recipients = (recipientRows ?? []) as SplitRequestRecipientRow[];
+        const recipientIds = Array.from(new Set(recipients.map((recipient) => recipient.recipient_id)));
+        const { data: profileRows, error: profilesError } =
+          recipientIds.length > 0
+            ? await supabase
+                .from("profiles")
+                .select(PROFILE_SELECT_COLUMNS)
+                .in("user_id", recipientIds)
+            : { data: [], error: null };
+
+        if (profilesError) {
+          throw profilesError;
+        }
+
+        const profileMap = new Map(
+          ((profileRows ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]),
+        );
+        const recipientsByRequestId = recipients.reduce(
+          (map, recipient) => {
+            const currentRecipients = map.get(recipient.request_id) ?? [];
+            currentRecipients.push(recipient);
+            map.set(recipient.request_id, currentRecipients);
+            return map;
+          },
+          new Map<string, SplitRequestRecipientRow[]>(),
+        );
+
+        setSentSplitRequests(
+          requests.map((request) => {
+            const requestRecipients: SentSplitRecipient[] =
+              recipientsByRequestId.get(request.id)?.map((recipient) => {
+                const profile = profileMap.get(recipient.recipient_id);
+                const email = profile?.email ?? "";
+
+                return {
+                  userId: recipient.recipient_id,
+                  email: email || "알 수 없는 동료",
+                  displayName:
+                    profile?.display_name?.trim() ||
+                    (email ? getEmailLocalPart(email) : "알 수 없는 동료"),
+                  recipientRowId: recipient.id,
+                  amount: recipient.amount,
+                  status: recipient.status,
+                  respondedAt: recipient.responded_at,
+                };
+              }) ?? [];
+
+            return {
+              requestId: request.id,
+              category: request.category,
+              totalAmount: request.total_amount,
+              perPersonAmount: request.per_person_amount,
+              participantCount: request.participant_count,
+              memo: request.memo ?? "",
+              date: request.date,
+              requesterExpenseId: request.requester_expense_id,
+              createdAt: request.created_at,
+              recipients: requestRecipients,
+            };
+          }),
+        );
+      } finally {
+        if (shouldShowLoading) {
+          setIsSentSplitRequestsLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setIsAuthLoading(false);
@@ -329,6 +441,7 @@ function App() {
       if (!nextSession) {
         setExpenses([]);
         setSplitRequests([]);
+        setSentSplitRequests([]);
         setCurrentProfile(null);
         setProfileDirectory([]);
         setSelectedCategory(null);
@@ -375,6 +488,10 @@ function App() {
         setIsSplitRequestsLoading(false);
         setSyncErrorMessage(getSyncErrorMessage("1/N 요청을 불러오지 못했습니다.", error));
       });
+      fetchSentSplitRequests(userId, { silent }).catch((error) => {
+        setIsSentSplitRequestsLoading(false);
+        setSyncErrorMessage(getSyncErrorMessage("보낸 1/N 요청을 불러오지 못했습니다.", error));
+      });
     };
 
     loadSplitRequests();
@@ -386,7 +503,16 @@ function App() {
           event: "*",
           schema: "public",
           table: "split_request_recipients",
-          filter: `recipient_id=eq.${userId}`,
+        },
+        () => loadSplitRequests(true),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_requests",
+          filter: `requester_id=eq.${userId}`,
         },
         () => loadSplitRequests(true),
       )
@@ -395,7 +521,7 @@ function App() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [fetchReceivedSplitRequests, userId]);
+  }, [fetchReceivedSplitRequests, fetchSentSplitRequests, userId]);
 
   const addExpense = async (expense: ExpenseInput) => {
     if (!userId) {
@@ -537,7 +663,16 @@ function App() {
         return false;
       }
 
+      await supabase
+        .from("split_requests")
+        .update({
+          requester_expense_id: data.id,
+        })
+        .eq("id", request.id)
+        .eq("requester_id", userId);
+
       setExpenses((currentExpenses) => [...currentExpenses, mapExpenseRow(data)]);
+      void fetchSentSplitRequests(userId, { silent: true });
       setSyncErrorMessage("");
       setSyncMessage(
         `1/N 요청을 보냈습니다. 나 포함 ${participantCount}명, 1인 ${perPersonAmount.toLocaleString()}원입니다.`,
@@ -783,6 +918,63 @@ function App() {
     return true;
   };
 
+  const cancelSentSplitRequest = async (request: SentSplitRequest) => {
+    if (!userId) {
+      setSyncErrorMessage("로그인이 필요합니다.");
+      return false;
+    }
+
+    const acceptedCount = request.recipients.filter(
+      (recipient) => recipient.status === "accepted",
+    ).length;
+
+    if (acceptedCount > 0) {
+      setSyncMessage("");
+      setSyncErrorMessage("이미 수락한 동료가 있는 1/N 요청은 취소할 수 없습니다.");
+      return false;
+    }
+
+    const { error: requestError } = await supabase
+      .from("split_requests")
+      .delete()
+      .eq("id", request.requestId)
+      .eq("requester_id", userId);
+
+    if (requestError) {
+      setSyncMessage("");
+      setSyncErrorMessage(getSyncErrorMessage("1/N 요청을 취소하지 못했습니다.", requestError));
+      return false;
+    }
+
+    if (request.requesterExpenseId) {
+      const { error: expenseError } = await supabase
+        .from("expenses")
+        .delete()
+        .eq("id", request.requesterExpenseId)
+        .eq("user_id", userId);
+
+      if (expenseError) {
+        setSyncMessage("");
+        setSyncErrorMessage(
+          getSyncErrorMessage("1/N 요청은 취소했지만 내 사용 내역을 삭제하지 못했습니다.", expenseError),
+        );
+        void fetchSentSplitRequests(userId, { silent: true });
+        return false;
+      }
+
+      setExpenses((currentExpenses) =>
+        currentExpenses.filter((expense) => expense.id !== request.requesterExpenseId),
+      );
+    }
+
+    setSentSplitRequests((currentRequests) =>
+      currentRequests.filter((currentRequest) => currentRequest.requestId !== request.requestId),
+    );
+    setSyncErrorMessage("");
+    setSyncMessage("보낸 1/N 요청을 취소했습니다.");
+    return true;
+  };
+
   const saveProfileName = async (displayName: string) => {
     if (!userId || !userEmail) {
       setSyncErrorMessage("로그인이 필요합니다.");
@@ -887,6 +1079,9 @@ function App() {
     return (
       <div className="header-actions">
         <span className="header-chip">{headerLabel}</span>
+        {splitRequests.length > 0 && (
+          <span className="header-chip request-badge">1/N 요청 {splitRequests.length}</span>
+        )}
         <button className="secondary-button" type="button" onClick={signOut}>
           로그아웃
         </button>
@@ -997,6 +1192,12 @@ function App() {
             requests={splitRequests}
             onAccept={acceptSplitRequest}
             onReject={rejectSplitRequest}
+          />
+
+          <SentSplitRequestsPanel
+            isLoading={isSentSplitRequestsLoading}
+            requests={sentSplitRequests}
+            onCancel={cancelSentSplitRequest}
           />
 
           <section className="history-section">

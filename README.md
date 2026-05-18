@@ -17,7 +17,9 @@ https://welfare-point-calculator.vercel.app
 - 사용 내역 추가 전 확인 모달
 - 삭제 전 확인창
 - 동료 이름, 아이디, 이메일로 1/N 차감 요청 보내기
+- 가입된 동료 목록에서 체크박스로 1/N 대상 선택
 - 받은 1/N 요청 실시간 확인 및 수락/거절
+- 보낸 1/N 요청 상태 확인 및 취소
 - 전체 사용 금액과 잔여 포인트 요약
 - 동호회, 운동, 도서대여/교육/사무용품 항목별 한도 관리
 - 항목 카드 클릭 시 상세 모달
@@ -129,6 +131,7 @@ src/
     ExpenseList.tsx
     PasswordUpdatePanel.tsx
     ProfileNameDialog.tsx
+    SentSplitRequestsPanel.tsx
     SplitRequestsPanel.tsx
     SummaryCard.tsx
   lib/

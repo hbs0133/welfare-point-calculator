@@ -18,7 +18,7 @@ export const EXPENSE_SELECT_COLUMNS =
 export const PROFILE_SELECT_COLUMNS = "user_id,email,display_name,created_at,updated_at";
 
 export const SPLIT_REQUEST_SELECT_COLUMNS =
-  "id,requester_id,category,total_amount,per_person_amount,participant_count,memo,date,created_at,updated_at";
+  "id,requester_id,requester_expense_id,category,total_amount,per_person_amount,participant_count,memo,date,created_at,updated_at";
 
 export const SPLIT_REQUEST_RECIPIENT_SELECT_COLUMNS =
   "id,request_id,recipient_id,amount,status,accepted_expense_id,created_at,responded_at";
@@ -45,6 +45,7 @@ export type ProfileRow = {
 export type SplitRequestRow = {
   id: string;
   requester_id: string;
+  requester_expense_id: string | null;
   category: CategoryKey;
   total_amount: number;
   per_person_amount: number;
