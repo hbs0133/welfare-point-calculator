@@ -203,94 +203,101 @@ function App() {
     setProfileDirectory(((data ?? []) as ProfileRow[]).map(mapProfileRow));
   }, []);
 
-  const fetchReceivedSplitRequests = useCallback(async (currentUserId: string) => {
-    setIsSplitRequestsLoading(true);
+  const fetchReceivedSplitRequests = useCallback(
+    async (currentUserId: string, options: { silent?: boolean } = {}) => {
+      const shouldShowLoading = !options.silent;
 
-    const { data: recipientRows, error: recipientsError } = await supabase
-      .from("split_request_recipients")
-      .select(SPLIT_REQUEST_RECIPIENT_SELECT_COLUMNS)
-      .eq("recipient_id", currentUserId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+      if (shouldShowLoading) {
+        setIsSplitRequestsLoading(true);
+      }
 
-    if (recipientsError) {
-      setIsSplitRequestsLoading(false);
-      throw recipientsError;
-    }
+      try {
+        const { data: recipientRows, error: recipientsError } = await supabase
+          .from("split_request_recipients")
+          .select(SPLIT_REQUEST_RECIPIENT_SELECT_COLUMNS)
+          .eq("recipient_id", currentUserId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
 
-    const recipients = (recipientRows ?? []) as SplitRequestRecipientRow[];
-    const requestIds = recipients.map((recipient) => recipient.request_id);
+        if (recipientsError) {
+          throw recipientsError;
+        }
 
-    if (requestIds.length === 0) {
-      setSplitRequests([]);
-      setIsSplitRequestsLoading(false);
-      return;
-    }
+        const recipients = (recipientRows ?? []) as SplitRequestRecipientRow[];
+        const requestIds = recipients.map((recipient) => recipient.request_id);
 
-    const { data: requestRows, error: requestsError } = await supabase
-      .from("split_requests")
-      .select(SPLIT_REQUEST_SELECT_COLUMNS)
-      .in("id", requestIds);
+        if (requestIds.length === 0) {
+          setSplitRequests([]);
+          return;
+        }
 
-    if (requestsError) {
-      setIsSplitRequestsLoading(false);
-      throw requestsError;
-    }
+        const { data: requestRows, error: requestsError } = await supabase
+          .from("split_requests")
+          .select(SPLIT_REQUEST_SELECT_COLUMNS)
+          .in("id", requestIds);
 
-    const requests = (requestRows ?? []) as SplitRequestRow[];
-    if (requests.length === 0) {
-      setSplitRequests([]);
-      setIsSplitRequestsLoading(false);
-      return;
-    }
+        if (requestsError) {
+          throw requestsError;
+        }
 
-    const requesterIds = Array.from(new Set(requests.map((request) => request.requester_id)));
-    const { data: profileRows, error: profilesError } = await supabase
-      .from("profiles")
-      .select(PROFILE_SELECT_COLUMNS)
-      .in("user_id", requesterIds);
+        const requests = (requestRows ?? []) as SplitRequestRow[];
+        if (requests.length === 0) {
+          setSplitRequests([]);
+          return;
+        }
 
-    setIsSplitRequestsLoading(false);
+        const requesterIds = Array.from(new Set(requests.map((request) => request.requester_id)));
+        const { data: profileRows, error: profilesError } = await supabase
+          .from("profiles")
+          .select(PROFILE_SELECT_COLUMNS)
+          .in("user_id", requesterIds);
 
-    if (profilesError) {
-      throw profilesError;
-    }
+        if (profilesError) {
+          throw profilesError;
+        }
 
-    const requestMap = new Map(requests.map((request) => [request.id, request]));
-    const profileMap = new Map(
-      ((profileRows ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]),
-    );
+        const requestMap = new Map(requests.map((request) => [request.id, request]));
+        const profileMap = new Map(
+          ((profileRows ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]),
+        );
 
-    setSplitRequests(
-      recipients
-        .map((recipient) => {
-          const request = requestMap.get(recipient.request_id);
-          if (!request) {
-            return null;
-          }
+        setSplitRequests(
+          recipients
+            .map((recipient) => {
+              const request = requestMap.get(recipient.request_id);
+              if (!request) {
+                return null;
+              }
 
-          const requesterProfile = profileMap.get(request.requester_id);
-          const requesterEmail = requesterProfile?.email ?? "";
+              const requesterProfile = profileMap.get(request.requester_id);
+              const requesterEmail = requesterProfile?.email ?? "";
 
-          return {
-            recipientId: recipient.id,
-            requestId: request.id,
-            requesterName:
-              requesterProfile?.display_name?.trim() ||
-              (requesterEmail ? getEmailLocalPart(requesterEmail) : "알 수 없는 요청자"),
-            requesterEmail: requesterEmail || "알 수 없는 요청자",
-            category: request.category,
-            totalAmount: request.total_amount,
-            perPersonAmount: request.per_person_amount,
-            participantCount: request.participant_count,
-            memo: request.memo ?? "",
-            date: request.date,
-            createdAt: request.created_at,
-          };
-        })
-        .filter((request): request is ReceivedSplitRequest => Boolean(request)),
-    );
-  }, []);
+              return {
+                recipientId: recipient.id,
+                requestId: request.id,
+                requesterName:
+                  requesterProfile?.display_name?.trim() ||
+                  (requesterEmail ? getEmailLocalPart(requesterEmail) : "알 수 없는 요청자"),
+                requesterEmail: requesterEmail || "알 수 없는 요청자",
+                category: request.category,
+                totalAmount: request.total_amount,
+                perPersonAmount: request.per_person_amount,
+                participantCount: request.participant_count,
+                memo: request.memo ?? "",
+                date: request.date,
+                createdAt: request.created_at,
+              };
+            })
+            .filter((request): request is ReceivedSplitRequest => Boolean(request)),
+        );
+      } finally {
+        if (shouldShowLoading) {
+          setIsSplitRequestsLoading(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -363,17 +370,31 @@ function App() {
       return;
     }
 
-    const loadSplitRequests = () => {
-      fetchReceivedSplitRequests(userId).catch((error) => {
+    const loadSplitRequests = (silent = false) => {
+      fetchReceivedSplitRequests(userId, { silent }).catch((error) => {
         setIsSplitRequestsLoading(false);
         setSyncErrorMessage(getSyncErrorMessage("1/N 요청을 불러오지 못했습니다.", error));
       });
     };
 
     loadSplitRequests();
-    const refreshTimer = window.setInterval(loadSplitRequests, 30_000);
+    const channel = supabase
+      .channel(`split-request-recipients:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "split_request_recipients",
+          filter: `recipient_id=eq.${userId}`,
+        },
+        () => loadSplitRequests(true),
+      )
+      .subscribe();
 
-    return () => window.clearInterval(refreshTimer);
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [fetchReceivedSplitRequests, userId]);
 
   const addExpense = async (expense: ExpenseInput) => {

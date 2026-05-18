@@ -218,3 +218,20 @@ on public.split_requests (requester_id, date desc);
 
 create index if not exists split_request_recipients_recipient_status_idx
 on public.split_request_recipients (recipient_id, status, created_at desc);
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'split_request_recipients'
+  ) then
+    alter publication supabase_realtime add table public.split_request_recipients;
+  end if;
+end $$;
