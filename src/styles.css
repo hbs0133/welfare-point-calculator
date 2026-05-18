@@ -182,18 +182,28 @@ button.header-chip {
   align-items: center;
   justify-content: center;
   min-height: 32px;
+  border: 1px solid #d9e2ff;
   border-radius: 999px;
-  background: var(--blue-soft);
+  background: #eaf0ff;
   color: var(--blue-dark);
   padding: 0 12px;
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(46, 65, 128, 0.08);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
 }
 
 .approval-shortcut:hover {
-  background: #e7ecff;
+  border-color: #cbd7ff;
+  background: #dfe7ff;
+  box-shadow: 0 8px 20px rgba(46, 65, 128, 0.12);
+  transform: translateY(-1px);
 }
 
 .summary-card,
