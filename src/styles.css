@@ -182,15 +182,21 @@ button.header-chip {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .entry-column {
+  align-self: stretch;
   min-width: 0;
+}
+
+.entry-column .tool-panel {
+  height: 100%;
 }
 
 .overview-column {
   display: grid;
+  align-self: start;
   align-content: start;
   min-width: 0;
   gap: 16px;
@@ -696,20 +702,61 @@ button.header-chip {
   min-height: 40px;
 }
 
-.notice-panel {
+.toast-stack {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 80;
+  display: grid;
+  width: min(420px, calc(100% - 36px));
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast-message {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 12px 32px rgba(25, 31, 40, 0.12);
   padding: 14px 16px;
+  pointer-events: auto;
 }
 
-.notice-panel p {
+.toast-message p {
   margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.toast-message.is-success {
+  border-color: #d5f5e7;
+}
+
+.toast-message.is-success p {
+  color: #008a61;
+}
+
+.toast-message.is-danger {
+  border-color: #ffe0e3;
+}
+
+.toast-message.is-danger p {
+  color: var(--danger);
+}
+
+.toast-message.is-action p {
+  color: #4e5968;
+  font-weight: 500;
+}
+
+.toast-message .secondary-button {
+  flex: 0 0 auto;
 }
 
 .modal-backdrop {
@@ -1863,8 +1910,14 @@ button.header-chip {
     max-width: 100%;
   }
 
-  .notice-panel {
-    align-items: flex-start;
+  .toast-stack {
+    top: 12px;
+    right: 11px;
+    width: calc(100% - 22px);
+  }
+
+  .toast-message {
+    align-items: stretch;
     flex-direction: column;
   }
 

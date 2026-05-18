@@ -127,6 +127,22 @@ function App() {
     });
   };
 
+  useEffect(() => {
+    if (!syncMessage && !syncErrorMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        setSyncMessage("");
+        setSyncErrorMessage("");
+      },
+      syncErrorMessage ? 6000 : 3500,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [syncMessage, syncErrorMessage]);
+
   const fetchExpenses = useCallback(async (currentUserId: string) => {
     setIsExpensesLoading(true);
     setSyncErrorMessage("");
@@ -1159,15 +1175,26 @@ function App() {
       ) : (
         <>
           {(syncMessage || syncErrorMessage || localBackupCount > 0) && (
-            <section className="notice-panel" aria-live="polite">
-              {syncMessage && <p className="success-text">{syncMessage}</p>}
-              {syncErrorMessage && <p className="warning-text">{syncErrorMessage}</p>}
-              {localBackupCount > 0 && (
-                <button className="secondary-button" type="button" onClick={migrateLocalExpenses}>
-                  기존 로컬 데이터 {localBackupCount}건 가져오기
-                </button>
+            <div className="toast-stack" aria-live="polite">
+              {syncMessage && (
+                <div className="toast-message is-success">
+                  <p>{syncMessage}</p>
+                </div>
               )}
-            </section>
+              {syncErrorMessage && (
+                <div className="toast-message is-danger">
+                  <p>{syncErrorMessage}</p>
+                </div>
+              )}
+              {localBackupCount > 0 && (
+                <div className="toast-message is-action">
+                  <p>기존 로컬 데이터 {localBackupCount}건이 있습니다.</p>
+                  <button className="secondary-button" type="button" onClick={migrateLocalExpenses}>
+                    가져오기
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="dashboard-layout">
