@@ -17,7 +17,7 @@ export function SummaryCard({
   const usageTone =
     isTotalExceeded || totalUsageRate >= 90
       ? "danger"
-      : totalUsageRate >= 70
+      : totalUsageRate >= 80
         ? "warning"
         : "theme";
 
