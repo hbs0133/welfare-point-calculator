@@ -51,6 +51,31 @@ const loadLocalExpenses = (): Expense[] => {
   }
 };
 
+const HIDDEN_SENT_SPLIT_REQUESTS_KEY = "welfare-point-hidden-sent-split-requests";
+
+const getHiddenSentSplitRequestsKey = (userId: string) =>
+  `${HIDDEN_SENT_SPLIT_REQUESTS_KEY}:${userId}`;
+
+const loadHiddenSentSplitRequestIds = (userId: string) => {
+  const raw = localStorage.getItem(getHiddenSentSplitRequestsKey(userId));
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((requestId): requestId is string => typeof requestId === "string")
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveHiddenSentSplitRequestIds = (userId: string, requestIds: string[]) => {
+  localStorage.setItem(getHiddenSentSplitRequestsKey(userId), JSON.stringify(requestIds));
+};
+
 const getSyncErrorMessage = (fallback: string, error: unknown) =>
   error instanceof Error ? error.message : fallback;
 
@@ -96,6 +121,7 @@ function App() {
   const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
   const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
   const [isSplitRequestCenterExpanded, setIsSplitRequestCenterExpanded] = useState(false);
+  const [hiddenSentSplitRequestIds, setHiddenSentSplitRequestIds] = useState<string[]>([]);
   const splitRequestCenterRef = useRef<HTMLDivElement>(null);
 
   const userId = session?.user.id ?? null;
@@ -116,6 +142,10 @@ function App() {
   );
 
   const pendingRequestCount = splitRequests.length;
+  const hiddenSentSplitRequestIdSet = useMemo(
+    () => new Set(hiddenSentSplitRequestIds),
+    [hiddenSentSplitRequestIds],
+  );
 
   const focusSplitRequestCenter = () => {
     setIsSplitRequestCenterExpanded(true);
@@ -352,7 +382,9 @@ function App() {
           throw requestsError;
         }
 
-        const requests = (requestRows ?? []) as SplitRequestRow[];
+        const requests = ((requestRows ?? []) as SplitRequestRow[]).filter(
+          (request) => !hiddenSentSplitRequestIdSet.has(request.id),
+        );
         const requestIds = requests.map((request) => request.id);
 
         if (requestIds.length === 0) {
@@ -437,7 +469,7 @@ function App() {
         }
       }
     },
-    [],
+    [hiddenSentSplitRequestIdSet],
   );
 
   useEffect(() => {
@@ -483,6 +515,10 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    setHiddenSentSplitRequestIds(userId ? loadHiddenSentSplitRequestIds(userId) : []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -672,7 +708,11 @@ function App() {
         return false;
       }
 
-      const ownMemo = expense.memo ? `${expense.memo} (1/N 내 몫)` : "1/N 내 몫";
+      const requesterLabel =
+        currentProfile?.display_name?.trim() || getEmailLocalPart(userEmail) || userEmail;
+      const ownMemo = expense.memo
+        ? `${expense.memo} (${requesterLabel} 1/N)`
+        : `${requesterLabel} 1/N`;
       const { data, error } = await supabase
         .from("expenses")
         .insert({
@@ -871,9 +911,12 @@ function App() {
       return false;
     }
 
+    const requesterLabel =
+      request.requesterName.trim() ||
+      (request.requesterEmail ? getEmailLocalPart(request.requesterEmail) : "요청자");
     const requestMemo = request.memo
-      ? `${request.memo} (${request.requesterEmail} 1/N)`
-      : `${request.requesterEmail} 1/N 요청`;
+      ? `${request.memo} (${requesterLabel} 1/N)`
+      : `${requesterLabel} 1/N`;
     const { data: expenseRow, error: expenseError } = await supabase
       .from("expenses")
       .insert({
@@ -1004,6 +1047,25 @@ function App() {
     return true;
   };
 
+  const dismissSentSplitRequest = (request: SentSplitRequest) => {
+    if (!userId) {
+      return;
+    }
+
+    setHiddenSentSplitRequestIds((currentIds) => {
+      const nextIds = currentIds.includes(request.requestId)
+        ? currentIds
+        : [...currentIds, request.requestId];
+      saveHiddenSentSplitRequestIds(userId, nextIds);
+      return nextIds;
+    });
+    setSentSplitRequests((currentRequests) =>
+      currentRequests.filter((currentRequest) => currentRequest.requestId !== request.requestId),
+    );
+    setSyncErrorMessage("");
+    setSyncMessage("보낸 요청을 목록에서 숨겼습니다.");
+  };
+
   const saveProfileName = async (displayName: string) => {
     if (!userId || !userEmail) {
       setSyncErrorMessage("로그인이 필요합니다.");
@@ -1106,21 +1168,31 @@ function App() {
         : userEmail;
 
     return (
-      <div className="header-actions">
-        <span className="header-chip">{headerLabel}</span>
-        {pendingRequestCount > 0 && (
-          <button
-            className="header-chip request-badge"
-            type="button"
-            onClick={focusSplitRequestCenter}
-            title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
-          >
-            1/N 요청 {pendingRequestCount}건
+      <div className="header-action-stack">
+        <div className="header-actions">
+          <span className="header-chip">{headerLabel}</span>
+          {pendingRequestCount > 0 && (
+            <button
+              className="header-chip request-badge"
+              type="button"
+              onClick={focusSplitRequestCenter}
+              title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
+            >
+              1/N 요청 {pendingRequestCount}건
+            </button>
+          )}
+          <button className="secondary-button" type="button" onClick={signOut}>
+            로그아웃
           </button>
-        )}
-        <button className="secondary-button" type="button" onClick={signOut}>
-          로그아웃
-        </button>
+        </div>
+        <a
+          className="approval-shortcut"
+          href="https://office.hiworks.com/asoosoft.onhiworks.com/approval/document/box/all"
+          target="_blank"
+          rel="noreferrer"
+        >
+          하이웍스 전자결재 바로가기
+        </a>
       </div>
     );
   };
@@ -1241,6 +1313,7 @@ function App() {
                   sentRequests={sentSplitRequests}
                   onAccept={acceptSplitRequest}
                   onCancel={cancelSentSplitRequest}
+                  onDismissSent={dismissSentSplitRequest}
                   onReject={rejectSplitRequest}
                   onToggle={() =>
                     setIsSplitRequestCenterExpanded((isExpanded) => !isExpanded)

@@ -148,6 +148,14 @@ button.header-chip {
   background: #ffedbf;
 }
 
+.header-action-stack {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -169,6 +177,25 @@ button.header-chip {
   font-weight: 600;
 }
 
+.approval-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-dark);
+  padding: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.approval-shortcut:hover {
+  background: #e7ecff;
+}
+
 .summary-card,
 .category-card,
 .tool-panel {
@@ -182,21 +209,19 @@ button.header-chip {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .entry-column {
-  align-self: stretch;
   min-width: 0;
 }
 
 .entry-column .tool-panel {
-  height: 100%;
+  min-height: 620px;
 }
 
 .overview-column {
   display: grid;
-  align-self: start;
   align-content: start;
   min-width: 0;
   gap: 16px;
@@ -635,11 +660,38 @@ button.header-chip {
 
 .split-request-item {
   display: grid;
+  position: relative;
   gap: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfcfd;
   padding: 14px;
+}
+
+.split-request-item--sent {
+  padding-right: 44px;
+}
+
+.dismiss-request-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: var(--blue-dark);
+  font-size: 1.12rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.dismiss-request-button:hover {
+  background: #e0e7ff;
 }
 
 .split-request-main {
@@ -1858,6 +1910,10 @@ button.header-chip {
     grid-template-columns: 1fr;
   }
 
+  .entry-column .tool-panel {
+    min-height: 0;
+  }
+
   .app-header h1 {
     font-size: 2.55rem;
   }
@@ -1893,6 +1949,11 @@ button.header-chip {
     flex-wrap: wrap;
   }
 
+  .header-action-stack {
+    align-items: flex-start;
+    width: 100%;
+  }
+
   .app-header h1 {
     font-size: 2.18rem;
   }
@@ -1908,6 +1969,10 @@ button.header-chip {
   .header-actions .header-chip {
     width: auto;
     max-width: 100%;
+  }
+
+  .approval-shortcut {
+    width: 100%;
   }
 
   .toast-stack {

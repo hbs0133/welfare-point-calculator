@@ -11,6 +11,7 @@ type SplitRequestCenterProps = {
   sentRequests: SentSplitRequest[];
   onAccept: (request: ReceivedSplitRequest) => Promise<boolean | void> | boolean | void;
   onCancel: (request: SentSplitRequest) => Promise<boolean | void> | boolean | void;
+  onDismissSent: (request: SentSplitRequest) => void;
   onReject: (request: ReceivedSplitRequest) => Promise<boolean | void> | boolean | void;
   onToggle: () => void;
 };
@@ -29,6 +30,7 @@ export function SplitRequestCenter({
   sentRequests,
   onAccept,
   onCancel,
+  onDismissSent,
   onReject,
   onToggle,
 }: SplitRequestCenterProps) {
@@ -216,7 +218,19 @@ export function SplitRequestCenter({
                   const canCancel = acceptedCount === 0;
 
                   return (
-                    <article className="split-request-item" key={request.requestId}>
+                    <article
+                      className="split-request-item split-request-item--sent"
+                      key={request.requestId}
+                    >
+                      <button
+                        className="dismiss-request-button"
+                        type="button"
+                        onClick={() => onDismissSent(request)}
+                        aria-label="보낸 요청 목록에서 숨기기"
+                        title="목록에서 숨기기"
+                      >
+                        ×
+                      </button>
                       <div className="split-request-main">
                         <div>
                           <span className={`category-pill ${request.category}`}>
