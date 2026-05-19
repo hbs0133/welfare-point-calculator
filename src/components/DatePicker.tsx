@@ -4,6 +4,7 @@ import { getTodayISO } from "../utils/format";
 type DatePickerProps = {
   value: string;
   onChange: (value: string) => void;
+  popoverPlacement?: "bottom" | "top";
   variant?: "default" | "table";
 };
 
@@ -45,7 +46,12 @@ const getCalendarDays = (currentMonth: Date) => {
   });
 };
 
-export function DatePicker({ value, onChange, variant = "default" }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  popoverPlacement = "bottom",
+  variant = "default",
+}: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() =>
     value ? parseISODate(value) : parseISODate(getTodayISO()),
@@ -87,7 +93,10 @@ export function DatePicker({ value, onChange, variant = "default" }: DatePickerP
   };
 
   return (
-    <div className={`date-picker date-picker--${variant}`} ref={containerRef}>
+    <div
+      className={`date-picker date-picker--${variant} date-picker--${popoverPlacement}`}
+      ref={containerRef}
+    >
       <button
         className="date-picker__trigger"
         type="button"

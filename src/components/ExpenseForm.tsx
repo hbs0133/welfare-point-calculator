@@ -435,7 +435,7 @@ export function ExpenseForm({
 
         <label className="field">
           <span>날짜</span>
-          <DatePicker value={date} onChange={setDate} />
+          <DatePicker value={date} onChange={setDate} popoverPlacement="top" />
         </label>
 
         <div className="split-config-card">

@@ -903,44 +903,65 @@ button.header-chip {
 
 .toast-message {
   display: flex;
+  position: relative;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid var(--line);
+  overflow: hidden;
+  border: 1px solid #d9e2ff;
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: 0 12px 32px rgba(25, 31, 40, 0.12);
+  box-shadow: 0 12px 32px rgba(46, 65, 128, 0.12);
   padding: 14px 16px;
   pointer-events: auto;
 }
 
+.toast-message::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--blue);
+}
+
 .toast-message p {
   margin: 0;
-  color: var(--ink);
+  color: var(--blue-dark);
   font-size: 0.92rem;
   font-weight: 600;
   line-height: 1.45;
+  padding-left: 2px;
 }
 
 .toast-message.is-success {
-  border-color: #d5f5e7;
+  border-color: #d9e2ff;
 }
 
 .toast-message.is-success p {
-  color: #008a61;
+  color: var(--blue-dark);
 }
 
 .toast-message.is-danger {
   border-color: #ffe0e3;
 }
 
+.toast-message.is-danger::before {
+  background: var(--danger);
+}
+
 .toast-message.is-danger p {
   color: var(--danger);
 }
 
+.toast-message.is-action {
+  border-color: #d9e2ff;
+}
+
 .toast-message.is-action p {
-  color: #4e5968;
-  font-weight: 500;
+  color: var(--blue-dark);
+  font-weight: 600;
 }
 
 .toast-message .secondary-button {
@@ -1881,6 +1902,11 @@ button.header-chip {
   background: #ffffff;
   box-shadow: 0 14px 36px rgba(25, 31, 40, 0.14);
   padding: 14px;
+}
+
+.date-picker--top .date-picker__popover {
+  top: auto;
+  bottom: calc(100% + 8px);
 }
 
 .date-picker--table .date-picker__popover {
