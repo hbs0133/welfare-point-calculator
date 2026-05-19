@@ -248,8 +248,8 @@ export function ExpenseList({
           </p>
         </div>
         <div className="list-actions">
-          <button className="primary-button list-add-button" type="button" onClick={onCreateExpense}>
-            + 사용 내역 추가
+          <button className="list-add-button" type="button" onClick={onCreateExpense}>
+            사용 내역 추가
           </button>
           <button
             className="secondary-button"

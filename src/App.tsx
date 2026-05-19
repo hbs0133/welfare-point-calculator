@@ -1221,16 +1221,9 @@ function App() {
             href="https://office.hiworks.com/asoosoft.onhiworks.com/approval/document/box/all"
             target="_blank"
             rel="noreferrer"
-          >
-            하이웍스 전자결재 바로가기
-          </a>
-          <button
-            className="primary-button header-add-button"
-            type="button"
-            onClick={() => setIsExpenseFormOpen(true)}
-          >
-            + 사용 내역 추가
-          </button>
+        >
+          하이웍스 전자결재 바로가기
+        </a>
         </div>
       </div>
     );
@@ -1274,7 +1267,7 @@ function App() {
         <div className="brand-heading">
           <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
           <h1 className="sr-only">AsooSoft Welfare Points</h1>
-          <p className="header-description">계정별로 복지 포인트 사용 내역을 안전하게 관리하세요.</p>
+          <p className="header-description">복지 포인트 사용 내역을 간편하게 관리하세요.</p>
         </div>
         {renderHeaderActions()}
       </header>
