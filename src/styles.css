@@ -222,7 +222,7 @@ button.header-chip {
 
 .floating-add-button {
   position: fixed;
-  right: 32px;
+  right: 48px;
   bottom: 28px;
   z-index: 35;
   display: inline-flex;
@@ -235,13 +235,34 @@ button.header-chip {
   background: var(--blue);
   color: #ffffff;
   box-shadow: 0 14px 32px rgba(46, 65, 128, 0.26);
-  font-size: 2.08rem;
+  font-size: 0;
   font-weight: 500;
   line-height: 1;
   transition:
     background-color 120ms ease,
     box-shadow 120ms ease,
     transform 120ms ease;
+}
+
+.floating-add-button::before,
+.floating-add-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 999px;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+}
+
+.floating-add-button::before {
+  width: 22px;
+  height: 3px;
+}
+
+.floating-add-button::after {
+  width: 3px;
+  height: 22px;
 }
 
 .floating-add-button:hover {
@@ -2153,11 +2174,10 @@ button.header-chip {
   }
 
   .floating-add-button {
-    right: 18px;
+    right: 28px;
     bottom: 20px;
     width: 56px;
     height: 56px;
-    font-size: 1.96rem;
   }
 
   .toast-stack {
