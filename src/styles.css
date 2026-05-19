@@ -67,15 +67,15 @@ button:disabled {
 .app-shell {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 42px 0 56px;
+  padding: 32px 0 56px;
 }
 
 .app-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
 .brand-heading {
@@ -84,7 +84,7 @@ button:disabled {
 
 .brand-logo {
   display: block;
-  width: 210px;
+  width: 158px;
   height: auto;
 }
 
@@ -148,62 +148,70 @@ button.header-chip {
   background: #ffedbf;
 }
 
-.header-action-stack {
-  display: flex;
-  align-items: flex-end;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
 .header-actions .header-chip {
-  max-width: 260px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.header-actions .secondary-button {
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 0.84rem;
-  font-weight: 600;
+.user-chip {
+  background: #ffffff;
+  color: var(--blue-dark);
 }
 
 .approval-shortcut {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  border: 1px solid #d9e2ff;
+  min-height: 34px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: #eaf0ff;
-  color: var(--blue-dark);
+  background: #ffffff;
+  color: #4e5968;
   padding: 0 12px;
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(46, 65, 128, 0.08);
   transition:
     background-color 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease,
-    transform 120ms ease;
+    border-color 120ms ease;
 }
 
 .approval-shortcut:hover {
-  border-color: #cbd7ff;
-  background: #dfe7ff;
-  box-shadow: 0 8px 20px rgba(46, 65, 128, 0.12);
-  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: #f9fafb;
+}
+
+.header-add-button {
+  min-height: 34px;
+  padding: 0 13px;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.header-logout-button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7684;
+  padding: 0 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.header-logout-button:hover {
+  background: #e5e8eb;
+  color: var(--ink);
 }
 
 .summary-card,
@@ -218,28 +226,6 @@ button.header-chip {
 .dashboard-stack {
   display: grid;
   gap: 18px;
-}
-
-.dashboard-command-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-width: 0;
-}
-
-.dashboard-command-row h2 {
-  margin: 4px 0 0;
-  color: var(--ink);
-  font-size: 1.38rem;
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.command-add-button {
-  min-height: 44px;
-  padding: 0 18px;
-  white-space: nowrap;
 }
 
 .dashboard-layout {
@@ -2057,7 +2043,7 @@ button.header-chip {
   }
 
   .brand-logo {
-    width: 190px;
+    width: 150px;
   }
 
   .remaining-total {
@@ -2094,15 +2080,7 @@ button.header-chip {
   .app-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .dashboard-command-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .command-add-button {
-    width: 100%;
+    gap: 14px;
   }
 
   .header-actions {
@@ -2111,30 +2089,25 @@ button.header-chip {
     flex-wrap: wrap;
   }
 
-  .header-action-stack {
-    align-items: flex-start;
-    width: 100%;
-  }
-
   .app-header h1 {
     font-size: 2.18rem;
   }
 
   .brand-logo {
-    width: 170px;
+    width: 148px;
   }
 
   .header-chip {
-    width: 100%;
+    width: auto;
   }
 
   .header-actions .header-chip {
     width: auto;
-    max-width: 100%;
+    max-width: min(100%, 220px);
   }
 
   .approval-shortcut {
-    width: 100%;
+    width: auto;
   }
 
   .toast-stack {

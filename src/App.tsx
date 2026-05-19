@@ -1192,35 +1192,42 @@ function App() {
     const displayName = currentProfile?.display_name?.trim();
     const headerLabel =
       displayName && displayName !== getEmailLocalPart(userEmail)
-        ? `${displayName} · ${userEmail}`
-        : userEmail;
+        ? displayName
+        : getEmailLocalPart(userEmail) || userEmail;
 
     return (
-      <div className="header-action-stack">
-        <div className="header-actions">
-          <span className="header-chip">{headerLabel}</span>
-          {pendingRequestCount > 0 && (
-            <button
-              className="header-chip request-badge"
-              type="button"
-              onClick={focusSplitRequestCenter}
-              title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
-            >
-              1/N 요청 {pendingRequestCount}건
-            </button>
-          )}
-          <button className="secondary-button" type="button" onClick={signOut}>
-            로그아웃
+      <div className="header-actions">
+        {pendingRequestCount > 0 && (
+          <button
+            className="header-chip request-badge"
+            type="button"
+            onClick={focusSplitRequestCenter}
+            title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
+          >
+            1/N {pendingRequestCount}
           </button>
-        </div>
+        )}
         <a
           className="approval-shortcut"
           href="https://office.hiworks.com/asoosoft.onhiworks.com/approval/document/box/all"
           target="_blank"
           rel="noreferrer"
         >
-          하이웍스 전자결재 바로가기
+          전자결재
         </a>
+        <button
+          className="primary-button header-add-button"
+          type="button"
+          onClick={() => setIsExpenseFormOpen(true)}
+        >
+          + 추가
+        </button>
+        <span className="header-chip user-chip" title={userEmail}>
+          {headerLabel}
+        </span>
+        <button className="header-logout-button" type="button" onClick={signOut}>
+          로그아웃
+        </button>
       </div>
     );
   };
@@ -1263,7 +1270,6 @@ function App() {
         <div className="brand-heading">
           <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
           <h1 className="sr-only">AsooSoft Welfare Points</h1>
-          <p className="header-description">계정별로 복지 포인트 사용 내역을 안전하게 관리하세요.</p>
         </div>
         {renderHeaderActions()}
       </header>
@@ -1298,20 +1304,6 @@ function App() {
           )}
 
           <div className="dashboard-stack">
-            <section className="dashboard-command-row" aria-label="복지 포인트 빠른 실행">
-              <div>
-                <p className="eyebrow">AsooSoft Welfare</p>
-                <h2>올해 복지 포인트</h2>
-              </div>
-              <button
-                className="primary-button command-add-button"
-                type="button"
-                onClick={() => setIsExpenseFormOpen(true)}
-              >
-                + 사용 내역 추가
-              </button>
-            </section>
-
             <SummaryCard
               totalUsed={pointSummary.totalUsed}
               totalRemaining={pointSummary.totalRemaining}
