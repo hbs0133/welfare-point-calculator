@@ -1,4 +1,4 @@
-import { FormEvent, useLayoutEffect, useMemo, useState } from "react";
+import { FormEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
 import type { CategoryKey, Expense, ExpenseInput, ProfileSummary } from "../types";
 import { getProjectedWarnings } from "../utils/calculations";
@@ -34,6 +34,7 @@ export function ExpenseForm({
   onSaved,
 }: ExpenseFormProps) {
   const [category, setCategory] = useState<CategoryKey>("club");
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
   const [memo, setMemo] = useState("");
   const [date, setDate] = useState(getTodayISO());
@@ -48,6 +49,7 @@ export function ExpenseForm({
   const [isConfirmingAdd, setIsConfirmingAdd] = useState(false);
   const [confirmErrorMessage, setConfirmErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
 
   const amount = parseAmountInput(amountInput);
   const currentEmail = normalizeEmail(currentUserEmail);
@@ -101,6 +103,35 @@ export function ExpenseForm({
     () => getProjectedWarnings(expenses, category, splitAmount),
     [category, expenses, splitAmount],
   );
+
+  useLayoutEffect(() => {
+    if (!isCategoryMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        event.target instanceof Node &&
+        !categoryMenuRef.current?.contains(event.target)
+      ) {
+        setIsCategoryMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCategoryMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCategoryMenuOpen]);
 
   useLayoutEffect(() => {
     if (!isSplitDialogOpen && !pendingExpense) {
@@ -335,19 +366,51 @@ export function ExpenseForm({
       </div>
 
       <form className="expense-form" onSubmit={handleSubmit}>
-        <label className="field">
-          <span>항목</span>
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value as CategoryKey)}
+        <div className="field category-select-field" ref={categoryMenuRef}>
+          <span id="expense-category-label">항목</span>
+          <button
+            className={`category-select-trigger ${isCategoryMenuOpen ? "is-open" : ""}`}
+            type="button"
+            aria-expanded={isCategoryMenuOpen}
+            aria-haspopup="listbox"
+            aria-labelledby="expense-category-label"
+            onClick={() => setIsCategoryMenuOpen((isOpen) => !isOpen)}
           >
-            {CATEGORY_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {CATEGORY_LABELS[key]}
-              </option>
-            ))}
-          </select>
-        </label>
+            <span className={`category-select-dot ${category}`} aria-hidden="true" />
+            <span>{CATEGORY_LABELS[category]}</span>
+            <span className="category-select-chevron" aria-hidden="true" />
+          </button>
+
+          {isCategoryMenuOpen && (
+            <div
+              className="category-select-menu"
+              role="listbox"
+              aria-labelledby="expense-category-label"
+            >
+              {CATEGORY_KEYS.map((key) => {
+                const isSelected = category === key;
+
+                return (
+                  <button
+                    className={`category-select-option ${isSelected ? "is-selected" : ""}`}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    key={key}
+                    onClick={() => {
+                      setCategory(key);
+                      setIsCategoryMenuOpen(false);
+                    }}
+                  >
+                    <span className={`category-select-dot ${key}`} aria-hidden="true" />
+                    <span>{CATEGORY_LABELS[key]}</span>
+                    {isSelected && <span className="category-select-check">선택</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <label className="field">
           <span>사용 금액</span>

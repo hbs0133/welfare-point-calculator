@@ -177,21 +177,21 @@ button.header-chip {
 
 .notification-count-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
   border: 2px solid #f2f4f6;
   border-radius: 999px;
   background: #ff3b30;
   color: #ffffff;
-  padding: 0 4px;
+  padding: 0 5px;
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1329,6 +1329,132 @@ button.header-chip {
   font-size: 0.84rem;
   font-weight: 500;
   letter-spacing: 0;
+}
+
+.category-select-field {
+  position: relative;
+}
+
+.category-select-trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 12px;
+  text-align: left;
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.category-select-trigger:hover {
+  border-color: var(--line-strong);
+}
+
+.category-select-trigger:focus-visible,
+.category-select-trigger.is-open {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.16);
+}
+
+.category-select-trigger > span:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-select-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  margin-right: 10px;
+  background: var(--blue);
+}
+
+.category-select-dot.club {
+  background: #ec6f8f;
+}
+
+.category-select-dot.exercise {
+  background: #00a881;
+}
+
+.category-select-dot.bookEducationOffice {
+  background: #f59f00;
+}
+
+.category-select-chevron {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #8b95a1;
+  border-bottom: 2px solid #8b95a1;
+  margin-left: auto;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 140ms ease;
+}
+
+.category-select-trigger.is-open .category-select-chevron {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.category-select-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(25, 31, 40, 0.12);
+  padding: 6px;
+}
+
+.category-select-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0 10px;
+  text-align: left;
+}
+
+.category-select-option:hover {
+  background: #f7f9fc;
+}
+
+.category-select-option.is-selected {
+  background: var(--blue-soft);
+}
+
+.category-select-check {
+  flex: 0 0 auto;
+  min-height: 24px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--blue-dark);
+  padding: 4px 8px;
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 650;
 }
 
 .expense-form input,
