@@ -1,10 +1,10 @@
 import { ChangeEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
-import type { CategoryFilter, CategoryKey, Expense, PeriodFilter } from "../types";
+import { CATEGORY_LABELS } from "../constants";
+import type { CategoryFilter, Expense, PeriodFilter } from "../types";
 import { filterExpenses, getTotalUsed, sortExpensesByLatest } from "../utils/calculations";
 import { createExpensesCsv, parseExpensesCsv } from "../utils/csv";
-import { formatNumber, formatWon, getTodayISO, parseAmountInput } from "../utils/format";
-import { DatePicker } from "./DatePicker";
+import { formatWon, getTodayISO } from "../utils/format";
+import { ExpenseForm } from "./ExpenseForm";
 
 type ExpenseListProps = {
   expenses: Expense[];
@@ -12,13 +12,6 @@ type ExpenseListProps = {
   onImportExpenses: (expenses: Expense[]) => boolean | void | Promise<boolean | void>;
   onReset: () => boolean | void | Promise<boolean | void>;
   onUpdateExpense: (expense: Expense) => boolean | void | Promise<boolean | void>;
-};
-
-type EditDraft = {
-  category: CategoryKey;
-  amountInput: string;
-  memo: string;
-  date: string;
 };
 
 const PERIOD_FILTERS: { key: PeriodFilter; label: string }[] = [
@@ -45,8 +38,7 @@ export function ExpenseList({
 }: ExpenseListProps) {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -74,13 +66,14 @@ export function ExpenseList({
   };
 
   useLayoutEffect(() => {
-    if (!deleteTarget && !isResetDialogOpen) {
+    if (!deleteTarget && !editTarget && !isResetDialogOpen) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isDeleting && !isResetting) {
         setDeleteTarget(null);
+        setEditTarget(null);
         setIsResetDialogOpen(false);
       }
     };
@@ -99,52 +92,14 @@ export function ExpenseList({
       document.body.style.paddingRight = originalPaddingRight;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [deleteTarget, isDeleting, isResetDialogOpen, isResetting]);
+  }, [deleteTarget, editTarget, isDeleting, isResetDialogOpen, isResetting]);
 
   const startEdit = (expense: Expense) => {
-    setEditingId(expense.id);
-    setEditDraft({
-      category: expense.category,
-      amountInput: String(expense.amount),
-      memo: expense.memo,
-      date: expense.date,
-    });
+    setEditTarget(expense);
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
-    setEditDraft(null);
-  };
-
-  const saveEdit = async (expense: Expense) => {
-    if (!editDraft) {
-      return;
-    }
-
-    const amount = parseAmountInput(editDraft.amountInput);
-    if (!amount) {
-      window.alert("사용 금액을 입력해주세요.");
-      return;
-    }
-
-    if (!editDraft.date) {
-      window.alert("날짜를 선택해주세요.");
-      return;
-    }
-
-    const wasSaved = await onUpdateExpense({
-      ...expense,
-      category: editDraft.category,
-      amount,
-      memo: editDraft.memo.trim(),
-      date: editDraft.date,
-    });
-
-    if (wasSaved === false) {
-      return;
-    }
-
-    cancelEdit();
+    setEditTarget(null);
   };
 
   const confirmDelete = (expense: Expense) => {
@@ -333,204 +288,17 @@ export function ExpenseList({
               </tr>
             </thead>
             <tbody>
-              {sortedExpenses.map((expense) => {
-                const isEditing = editingId === expense.id && editDraft;
-                const editAmount = editDraft ? parseAmountInput(editDraft.amountInput) : 0;
-
-                return (
-                  <tr key={expense.id}>
-                    {isEditing ? (
-                      <>
-                        <td className="date-edit-cell">
-                          <DatePicker
-                            value={editDraft.date}
-                            onChange={(date) => setEditDraft({ ...editDraft, date })}
-                            variant="table"
-                          />
-                        </td>
-                        <td>
-                          <select
-                            className="table-input"
-                            value={editDraft.category}
-                            onChange={(event) =>
-                              setEditDraft({
-                                ...editDraft,
-                                category: event.target.value as CategoryKey,
-                              })
-                            }
-                          >
-                            {CATEGORY_KEYS.map((key) => (
-                              <option key={key} value={key}>
-                                {CATEGORY_LABELS[key]}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            className="table-input amount-edit-input"
-                            inputMode="numeric"
-                            type="text"
-                            value={editDraft.amountInput ? formatNumber(editAmount) : ""}
-                            onChange={(event) =>
-                              setEditDraft({
-                                ...editDraft,
-                                amountInput: String(parseAmountInput(event.target.value)),
-                              })
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="table-input memo-edit-input"
-                            type="text"
-                            value={editDraft.memo}
-                            onChange={(event) =>
-                              setEditDraft({ ...editDraft, memo: event.target.value })
-                            }
-                          />
-                        </td>
-                        <td>
-                          <div className="row-actions">
-                            <button
-                              className="mini-button primary"
-                              type="button"
-                              onClick={() => saveEdit(expense)}
-                            >
-                              저장
-                            </button>
-                            <button className="mini-button" type="button" onClick={cancelEdit}>
-                              취소
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td>{expense.date}</td>
-                        <td>
-                          <span className={`category-pill ${expense.category}`}>
-                            {CATEGORY_LABELS[expense.category]}
-                          </span>
-                        </td>
-                        <td className="amount-cell">{formatWon(expense.amount)}</td>
-                        <td>{expense.memo || "-"}</td>
-                        <td>
-                          <div className="row-actions">
-                            <button
-                              className="mini-button"
-                              type="button"
-                              onClick={() => startEdit(expense)}
-                            >
-                              수정
-                            </button>
-                            <button
-                              className="ghost-button"
-                              type="button"
-                              onClick={() => confirmDelete(expense)}
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {sortedExpenses.length > 0 && (
-        <div className="expense-card-list" aria-label="모바일 사용 내역">
-          {sortedExpenses.map((expense) => {
-            const isEditing = editingId === expense.id && editDraft;
-            const editAmount = editDraft ? parseAmountInput(editDraft.amountInput) : 0;
-
-            return (
-              <article className="expense-mobile-card" key={expense.id}>
-                {isEditing ? (
-                  <>
-                    <div className="mobile-edit-grid">
-                      <label className="field">
-                        <span>날짜</span>
-                        <DatePicker
-                          value={editDraft.date}
-                          onChange={(date) => setEditDraft({ ...editDraft, date })}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>항목</span>
-                        <select
-                          className="table-input"
-                          value={editDraft.category}
-                          onChange={(event) =>
-                            setEditDraft({
-                              ...editDraft,
-                              category: event.target.value as CategoryKey,
-                            })
-                          }
-                        >
-                          {CATEGORY_KEYS.map((key) => (
-                            <option key={key} value={key}>
-                              {CATEGORY_LABELS[key]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="field">
-                        <span>금액</span>
-                        <input
-                          className="table-input amount-edit-input"
-                          inputMode="numeric"
-                          type="text"
-                          value={editDraft.amountInput ? formatNumber(editAmount) : ""}
-                          onChange={(event) =>
-                            setEditDraft({
-                              ...editDraft,
-                              amountInput: String(parseAmountInput(event.target.value)),
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>메모</span>
-                        <input
-                          className="table-input"
-                          type="text"
-                          value={editDraft.memo}
-                          onChange={(event) =>
-                            setEditDraft({ ...editDraft, memo: event.target.value })
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className="row-actions">
-                      <button
-                        className="mini-button primary"
-                        type="button"
-                        onClick={() => saveEdit(expense)}
-                      >
-                        저장
-                      </button>
-                      <button className="mini-button" type="button" onClick={cancelEdit}>
-                        취소
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="expense-mobile-card__top">
-                      <div>
-                        <span>{expense.date}</span>
-                        <strong>{formatWon(expense.amount)}</strong>
-                      </div>
-                      <span className={`category-pill ${expense.category}`}>
-                        {CATEGORY_LABELS[expense.category]}
-                      </span>
-                    </div>
-                    <p>{expense.memo || "-"}</p>
+              {sortedExpenses.map((expense) => (
+                <tr key={expense.id}>
+                  <td>{expense.date}</td>
+                  <td>
+                    <span className={`category-pill ${expense.category}`}>
+                      {CATEGORY_LABELS[expense.category]}
+                    </span>
+                  </td>
+                  <td className="amount-cell">{formatWon(expense.amount)}</td>
+                  <td>{expense.memo || "-"}</td>
+                  <td>
                     <div className="row-actions">
                       <button
                         className="mini-button"
@@ -547,11 +315,70 @@ export function ExpenseList({
                         삭제
                       </button>
                     </div>
-                  </>
-                )}
-              </article>
-            );
-          })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {sortedExpenses.length > 0 && (
+        <div className="expense-card-list" aria-label="모바일 사용 내역">
+          {sortedExpenses.map((expense) => (
+            <article className="expense-mobile-card" key={expense.id}>
+              <div className="expense-mobile-card__top">
+                <div>
+                  <span>{expense.date}</span>
+                  <strong>{formatWon(expense.amount)}</strong>
+                </div>
+                <span className={`category-pill ${expense.category}`}>
+                  {CATEGORY_LABELS[expense.category]}
+                </span>
+              </div>
+              <p>{expense.memo || "-"}</p>
+              <div className="row-actions">
+                <button
+                  className="mini-button"
+                  type="button"
+                  onClick={() => startEdit(expense)}
+                >
+                  수정
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => confirmDelete(expense)}
+                >
+                  삭제
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      {editTarget && (
+        <div
+          className="modal-backdrop add-expense-backdrop"
+          role="presentation"
+          onMouseDown={cancelEdit}
+        >
+          <div
+            className="expense-form-modal"
+            role="dialog"
+            aria-label="사용 내역 수정"
+            aria-modal="true"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <ExpenseForm
+              expenses={expenses}
+              initialExpense={editTarget}
+              isModal
+              mode="edit"
+              onClose={cancelEdit}
+              onSaved={cancelEdit}
+              onUpdateExpense={onUpdateExpense}
+            />
+          </div>
         </div>
       )}
       {deleteTarget && (

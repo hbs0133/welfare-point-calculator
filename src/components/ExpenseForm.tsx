@@ -1,4 +1,4 @@
-import { FormEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
 import type { CategoryKey, Expense, ExpenseInput, ProfileSummary } from "../types";
 import { getProjectedWarnings } from "../utils/calculations";
@@ -11,33 +11,42 @@ import { formatNumber, formatWon, getTodayISO, parseAmountInput } from "../utils
 import { DatePicker } from "./DatePicker";
 
 type ExpenseFormProps = {
-  currentUserId: string;
-  currentUserEmail: string;
+  currentUserId?: string;
+  currentUserEmail?: string;
   expenses: Expense[];
+  initialExpense?: Expense;
   isModal?: boolean;
-  profiles: ProfileSummary[];
-  onRefreshProfiles: () => Promise<void> | void;
-  onAddExpense: (expense: ExpenseInput) => boolean | void | Promise<boolean | void>;
+  mode?: "create" | "edit";
+  profiles?: ProfileSummary[];
+  onRefreshProfiles?: () => Promise<void> | void;
+  onAddExpense?: (expense: ExpenseInput) => boolean | void | Promise<boolean | void>;
   onClose?: () => void;
   onSaved?: () => void;
+  onUpdateExpense?: (expense: Expense) => boolean | void | Promise<boolean | void>;
 };
 
 export function ExpenseForm({
   currentUserId,
   currentUserEmail,
   expenses,
+  initialExpense,
   isModal = false,
+  mode = "create",
   profiles,
   onRefreshProfiles,
   onAddExpense,
   onClose,
   onSaved,
+  onUpdateExpense,
 }: ExpenseFormProps) {
-  const [category, setCategory] = useState<CategoryKey>("club");
+  const isEditMode = mode === "edit" && Boolean(initialExpense);
+  const [category, setCategory] = useState<CategoryKey>(initialExpense?.category ?? "club");
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [amountInput, setAmountInput] = useState("");
-  const [memo, setMemo] = useState("");
-  const [date, setDate] = useState(getTodayISO());
+  const [amountInput, setAmountInput] = useState(
+    initialExpense ? String(initialExpense.amount) : "",
+  );
+  const [memo, setMemo] = useState(initialExpense?.memo ?? "");
+  const [date, setDate] = useState(initialExpense?.date ?? getTodayISO());
   const [splitRecipients, setSplitRecipients] = useState<ProfileSummary[]>([]);
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isDirectoryDialogOpen, setIsDirectoryDialogOpen] = useState(false);
@@ -52,10 +61,10 @@ export function ExpenseForm({
   const categoryMenuRef = useRef<HTMLDivElement>(null);
 
   const amount = parseAmountInput(amountInput);
-  const currentEmail = normalizeEmail(currentUserEmail);
+  const currentEmail = normalizeEmail(currentUserEmail ?? "");
   const availableProfiles = useMemo(
     () =>
-      profiles.filter(
+      (profiles ?? []).filter(
         (profile) =>
           profile.userId !== currentUserId && normalizeEmail(profile.email) !== currentEmail,
       ),
@@ -99,10 +108,32 @@ export function ExpenseForm({
     });
   }, [availableProfiles, directorySearchInput]);
 
-  const projectedWarnings = useMemo(
-    () => getProjectedWarnings(expenses, category, splitAmount),
-    [category, expenses, splitAmount],
+  const warningBaseExpenses = useMemo(
+    () =>
+      isEditMode && initialExpense
+        ? expenses.filter((expense) => expense.id !== initialExpense.id)
+        : expenses,
+    [expenses, initialExpense, isEditMode],
   );
+  const projectedWarnings = useMemo(
+    () => getProjectedWarnings(warningBaseExpenses, category, splitAmount),
+    [category, splitAmount, warningBaseExpenses],
+  );
+
+  useEffect(() => {
+    if (!initialExpense) {
+      return;
+    }
+
+    setCategory(initialExpense.category);
+    setAmountInput(String(initialExpense.amount));
+    setMemo(initialExpense.memo);
+    setDate(initialExpense.date);
+    setSplitRecipients([]);
+    setErrorMessage("");
+    setConfirmErrorMessage("");
+    setPendingExpense(null);
+  }, [initialExpense]);
 
   useLayoutEffect(() => {
     if (!isCategoryMenuOpen) {
@@ -169,7 +200,7 @@ export function ExpenseForm({
   const openSplitDialog = () => {
     setSplitDialogError("");
     setIsSplitDialogOpen(true);
-    Promise.resolve(onRefreshProfiles()).catch(() => {
+    Promise.resolve(onRefreshProfiles?.()).catch(() => {
       setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
     });
   };
@@ -178,7 +209,7 @@ export function ExpenseForm({
     setDirectorySelectedIds(splitRecipients.map((recipient) => recipient.userId));
     setDirectorySearchInput("");
     setIsDirectoryDialogOpen(true);
-    Promise.resolve(onRefreshProfiles()).catch(() => {
+    Promise.resolve(onRefreshProfiles?.()).catch(() => {
       setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
     });
   };
@@ -290,7 +321,16 @@ export function ExpenseForm({
     setIsConfirmingAdd(true);
     setConfirmErrorMessage("");
     try {
-      const wasSaved = await onAddExpense(pendingExpense);
+      const wasSaved =
+        isEditMode && initialExpense
+          ? await onUpdateExpense?.({
+              ...initialExpense,
+              category: pendingExpense.category,
+              amount: pendingExpense.amount,
+              memo: pendingExpense.memo,
+              date: pendingExpense.date,
+            })
+          : await onAddExpense?.(pendingExpense);
 
       if (wasSaved === false) {
         setConfirmErrorMessage("저장하지 못했습니다. 화면 안내를 확인한 뒤 다시 시도해주세요.");
@@ -319,7 +359,7 @@ export function ExpenseForm({
       return;
     }
 
-    if (splitRecipients.length > 0) {
+    if (!isEditMode && splitRecipients.length > 0) {
       const invalidEmails = splitRecipients.filter((profile) => !isCompanyEmail(profile.email));
       if (invalidEmails.length > 0) {
         setErrorMessage("@asoosoft.net 회사 이메일만 요청할 수 있어요.");
@@ -337,7 +377,7 @@ export function ExpenseForm({
       amount,
       memo: memo.trim(),
       date,
-      split: splitRecipients.length > 0
+      split: !isEditMode && splitRecipients.length > 0
         ? {
             recipients: splitRecipients,
           }
@@ -350,14 +390,16 @@ export function ExpenseForm({
     <section className={`tool-panel expense-form-panel ${isModal ? "is-modal" : ""}`}>
       <div className="section-title expense-form-title">
         <div>
-          <h2>사용 내역 추가</h2>
-          <p className="section-subtitle">새 사용 내역</p>
+          <h2>{isEditMode ? "사용 내역 수정" : "사용 내역 추가"}</h2>
+          <p className="section-subtitle">
+            {isEditMode ? "등록된 사용 내역을 수정합니다." : "새 사용 내역"}
+          </p>
         </div>
         {onClose && (
           <button
             className="modal-close-button"
             type="button"
-            aria-label="사용 내역 추가 닫기"
+            aria-label={isEditMode ? "사용 내역 수정 닫기" : "사용 내역 추가 닫기"}
             onClick={onClose}
           >
             ×
@@ -438,28 +480,30 @@ export function ExpenseForm({
           <DatePicker value={date} onChange={setDate} popoverPlacement="top" />
         </label>
 
-        <div className="split-config-card">
-          <div>
-            <strong>1/N 요청</strong>
-            <p>{splitSummaryText}</p>
-          </div>
-          <div className="split-config-actions">
-            {splitRecipients.length > 0 && (
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => setSplitRecipients([])}
-              >
-                해제
+        {!isEditMode && (
+          <div className="split-config-card">
+            <div>
+              <strong>1/N 요청</strong>
+              <p>{splitSummaryText}</p>
+            </div>
+            <div className="split-config-actions">
+              {splitRecipients.length > 0 && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setSplitRecipients([])}
+                >
+                  해제
+                </button>
+              )}
+              <button className="secondary-button" type="button" onClick={openSplitDialog}>
+                {splitRecipients.length > 0 ? "수정" : "설정"}
               </button>
-            )}
-            <button className="secondary-button" type="button" onClick={openSplitDialog}>
-              {splitRecipients.length > 0 ? "수정" : "설정"}
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {splitRecipients.length > 0 && (
+        {!isEditMode && splitRecipients.length > 0 && (
           <div className="split-selected-list" aria-label="선택된 1/N 요청 대상">
             {splitRecipients.map((recipient) => (
               <span className="split-recipient-chip" key={recipient.userId}>
@@ -470,7 +514,7 @@ export function ExpenseForm({
         )}
 
         <button className="primary-button" type="submit">
-          + 추가
+          {isEditMode ? "수정" : "+ 추가"}
         </button>
       </form>
 
@@ -643,13 +687,17 @@ export function ExpenseForm({
           <section
             className="confirm-dialog"
             role="dialog"
-            aria-label="사용 내역 추가 확인"
+            aria-label={isEditMode ? "사용 내역 수정 확인" : "사용 내역 추가 확인"}
             aria-modal="true"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="confirm-dialog__header">
-              <h2>사용 내역을 추가할까요?</h2>
-              <p>아래 내용으로 포인트 사용 내역을 저장합니다.</p>
+              <h2>{isEditMode ? "사용 내역을 수정할까요?" : "사용 내역을 추가할까요?"}</h2>
+              <p>
+                {isEditMode
+                  ? "아래 내용으로 포인트 사용 내역을 수정합니다."
+                  : "아래 내용으로 포인트 사용 내역을 저장합니다."}
+              </p>
             </div>
 
             <div className="confirm-dialog__summary">
@@ -706,7 +754,7 @@ export function ExpenseForm({
                 onClick={confirmAddExpense}
                 disabled={isConfirmingAdd}
               >
-                {isConfirmingAdd ? "추가 중" : "추가"}
+                {isConfirmingAdd ? "저장 중" : isEditMode ? "수정" : "추가"}
               </button>
             </div>
           </section>

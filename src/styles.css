@@ -2321,39 +2321,10 @@ button.header-chip {
   overflow: hidden;
 }
 
-.expense-table .date-edit-cell {
-  overflow: visible;
-}
-
 .amount-cell {
   color: var(--ink);
   font-weight: 650;
   white-space: nowrap;
-}
-
-.table-input {
-  width: 100%;
-  max-width: 100%;
-  min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--ink);
-  padding: 0 10px;
-  outline: none;
-}
-
-.table-input:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(74, 99, 183, 0.14);
-}
-
-.amount-edit-input {
-  text-align: right;
-}
-
-.memo-edit-input {
-  min-width: 0;
 }
 
 .row-actions {
@@ -2400,11 +2371,6 @@ button.header-chip {
   color: #333d4b;
   font-size: 0.92rem;
   line-height: 1.45;
-}
-
-.mobile-edit-grid {
-  display: grid;
-  gap: 12px;
 }
 
 .category-pill {
