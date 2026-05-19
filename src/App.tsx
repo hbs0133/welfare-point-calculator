@@ -1252,7 +1252,7 @@ function App() {
         <header className="app-header">
           <div className="brand-heading">
             <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
-            <h1 className="sr-only">AsooSoft Welfare Points</h1>
+            <h1 className="sr-only">AsooPoint</h1>
             <p className="header-description">계정 정보를 확인하고 있습니다.</p>
           </div>
         </header>
@@ -1267,7 +1267,7 @@ function App() {
         <header className="app-header">
           <div className="brand-heading">
             <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
-            <h1 className="sr-only">AsooSoft Welfare Points</h1>
+            <h1 className="sr-only">AsooPoint</h1>
             <p className="header-description">Supabase 연결 정보가 필요합니다.</p>
           </div>
         </header>
@@ -1283,7 +1283,7 @@ function App() {
       <header className="app-header">
         <div className="brand-heading">
           <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
-          <h1 className="sr-only">AsooSoft Welfare Points</h1>
+          <h1 className="sr-only">AsooPoint</h1>
           <p className="header-description">복지 포인트 사용 내역을 간편하게 관리하세요.</p>
         </div>
         {renderHeaderActions()}

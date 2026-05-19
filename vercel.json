@@ -2,5 +2,18 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "welfare-point-calculator.vercel.app"
+        }
+      ],
+      "destination": "https://asoopoint.vercel.app/:path*",
+      "permanent": true
+    }
+  ]
 }

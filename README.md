@@ -1,10 +1,10 @@
-# AsooSoft Welfare Points
+# AsooPoint
 
 AsooSoft 사내 복지 포인트 사용 내역을 기록하고, 전체 잔여 포인트와 항목별 잔여 한도를 빠르게 확인하는 웹앱입니다.
 
 ## 배포 주소
 
-https://welfare-point-calculator.vercel.app
+https://asoopoint.vercel.app
 
 ## 주요 기능
 
@@ -162,5 +162,5 @@ npx vercel --prod
 동료에게 공유할 때는 generated deployment URL 대신 production alias URL을 사용합니다.
 
 ```text
-https://welfare-point-calculator.vercel.app
+https://asoopoint.vercel.app
 ```
