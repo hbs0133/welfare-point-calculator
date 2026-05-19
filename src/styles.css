@@ -139,13 +139,60 @@ button.header-chip {
   cursor: pointer;
 }
 
-.header-chip.request-badge {
-  background: #fff4d6;
-  color: #b86b00;
+.notification-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4e5968;
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.header-chip.request-badge:hover {
-  background: #ffedbf;
+.notification-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.notification-button:hover {
+  background: #f7f9fc;
+  color: var(--blue-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(46, 65, 128, 0.12);
+}
+
+.notification-button.has-alert {
+  color: var(--blue-dark);
+}
+
+.notification-count-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border: 2px solid #f2f4f6;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #ffffff;
+  padding: 0 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .header-action-stack {
@@ -1008,6 +1055,160 @@ button.header-chip {
 
 .confirm-dialog__delete {
   min-height: 40px;
+}
+
+.notification-dialog {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: hidden;
+  padding: 24px;
+}
+
+.notification-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notification-dialog__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: var(--blue-dark);
+  padding: 0 9px;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.notification-dialog__header h2 {
+  margin-top: 10px;
+}
+
+.notification-dialog__close {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #4e5968;
+  cursor: pointer;
+}
+
+.notification-dialog__close::before,
+.notification-dialog__close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.notification-dialog__close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.notification-dialog__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.notification-dialog__close:hover {
+  background: #e5e8eb;
+}
+
+.notification-dialog__empty {
+  margin-top: 18px;
+}
+
+.notification-request-list {
+  display: grid;
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+  gap: 10px;
+  margin-top: 18px;
+  padding-right: 4px;
+}
+
+.notification-request-card {
+  display: grid;
+  gap: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 15px;
+}
+
+.notification-request-card__top,
+.notification-request-card__sender {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.notification-request-card__top strong {
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.notification-request-card__sender strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.notification-request-card__sender span,
+.notification-request-card__sender time {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.notification-request-card__sender span {
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.notification-request-card__sender time {
+  flex: 0 0 auto;
+}
+
+.notification-request-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.notification-request-meta span {
+  min-height: 26px;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #4e5968;
+  padding: 5px 9px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.notification-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.notification-request-actions button {
+  min-width: 72px;
 }
 
 .tool-panel {

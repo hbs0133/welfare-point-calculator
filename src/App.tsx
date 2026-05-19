@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { AuthPanel } from "./components/AuthPanel";
 import { CategoryCard } from "./components/CategoryCard";
 import { CategoryDetail } from "./components/CategoryDetail";
@@ -7,7 +7,7 @@ import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
 import { PasswordUpdatePanel } from "./components/PasswordUpdatePanel";
 import { ProfileNameDialog } from "./components/ProfileNameDialog";
-import { SplitRequestCenter } from "./components/SplitRequestCenter";
+import { SplitRequestNotificationDialog } from "./components/SplitRequestNotificationDialog";
 import { SummaryCard } from "./components/SummaryCard";
 import { STORAGE_KEY } from "./constants";
 import {
@@ -121,9 +121,8 @@ function App() {
   const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
   const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
-  const [isSplitRequestCenterExpanded, setIsSplitRequestCenterExpanded] = useState(false);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [hiddenSentSplitRequestIds, setHiddenSentSplitRequestIds] = useState<string[]>([]);
-  const splitRequestCenterRef = useRef<HTMLDivElement>(null);
 
   const userId = session?.user.id ?? null;
   const userEmail = session?.user.email ?? "";
@@ -147,16 +146,6 @@ function App() {
     () => new Set(hiddenSentSplitRequestIds),
     [hiddenSentSplitRequestIds],
   );
-
-  const focusSplitRequestCenter = () => {
-    setIsSplitRequestCenterExpanded(true);
-    window.requestAnimationFrame(() => {
-      splitRequestCenterRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  };
 
   useEffect(() => {
     if (!syncMessage && !syncErrorMessage) {
@@ -1201,16 +1190,44 @@ function App() {
           <span className="header-chip user-chip" title={userEmail}>
             {headerLabel}
           </span>
-          {pendingRequestCount > 0 && (
-            <button
-              className="header-chip request-badge"
-              type="button"
-              onClick={focusSplitRequestCenter}
-              title={`받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`}
-            >
-              1/N 요청 {pendingRequestCount}건
-            </button>
-          )}
+          <button
+            className={`notification-button ${pendingRequestCount > 0 ? "has-alert" : ""}`}
+            type="button"
+            onClick={() => setIsNotificationDialogOpen(true)}
+            aria-label={
+              pendingRequestCount > 0
+                ? `받은 1/N 요청 ${pendingRequestCount}건 확인`
+                : "1/N 요청 알림 확인"
+            }
+            title={
+              pendingRequestCount > 0
+                ? `받은 1/N 요청이 ${pendingRequestCount}건 있습니다.`
+                : "새로 받은 1/N 요청이 없습니다."
+            }
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M18 9.5a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17S18 15.5 18 9.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+              <path
+                d="M9.5 20a2.8 2.8 0 0 0 5 0"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="2"
+              />
+            </svg>
+            {pendingRequestCount > 0 && (
+              <span className="notification-count-badge">
+                {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+              </span>
+            )}
+          </button>
           <button className="secondary-button" type="button" onClick={signOut}>
             로그아웃
           </button>
@@ -1332,23 +1349,6 @@ function App() {
                 ))}
               </section>
             </section>
-
-            <div ref={splitRequestCenterRef}>
-              <SplitRequestCenter
-                isExpanded={isSplitRequestCenterExpanded}
-                isReceivedLoading={isSplitRequestsLoading}
-                isSentLoading={isSentSplitRequestsLoading}
-                receivedRequests={splitRequests}
-                sentRequests={sentSplitRequests}
-                onAccept={acceptSplitRequest}
-                onCancel={cancelSentSplitRequest}
-                onDismissSent={dismissSentSplitRequest}
-                onReject={rejectSplitRequest}
-                onToggle={() =>
-                  setIsSplitRequestCenterExpanded((isExpanded) => !isExpanded)
-                }
-              />
-            </div>
           </div>
 
           <section className="history-section">
@@ -1365,7 +1365,7 @@ function App() {
             )}
           </section>
 
-          {!isExpenseFormOpen && (
+          {!isExpenseFormOpen && !isNotificationDialogOpen && (
             <button
               className="floating-add-button"
               type="button"
@@ -1403,6 +1403,16 @@ function App() {
                 />
               </div>
             </div>
+          )}
+
+          {isNotificationDialogOpen && (
+            <SplitRequestNotificationDialog
+              isLoading={isSplitRequestsLoading}
+              requests={splitRequests}
+              onAccept={acceptSplitRequest}
+              onClose={() => setIsNotificationDialogOpen(false)}
+              onReject={rejectSplitRequest}
+            />
           )}
 
           {selectedCategorySummary && (
