@@ -1365,15 +1365,17 @@ function App() {
             )}
           </section>
 
-          <button
-            className="floating-add-button"
-            type="button"
-            onClick={() => setIsExpenseFormOpen(true)}
-            aria-label="사용 내역 추가"
-            title="사용 내역 추가"
-          >
-            +
-          </button>
+          {!isExpenseFormOpen && (
+            <button
+              className="floating-add-button"
+              type="button"
+              onClick={() => setIsExpenseFormOpen(true)}
+              aria-label="사용 내역 추가"
+              title="사용 내역 추가"
+            >
+              +
+            </button>
+          )}
 
           {isExpenseFormOpen && (
             <div
