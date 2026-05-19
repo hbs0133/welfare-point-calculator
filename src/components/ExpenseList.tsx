@@ -8,7 +8,6 @@ import { DatePicker } from "./DatePicker";
 
 type ExpenseListProps = {
   expenses: Expense[];
-  onCreateExpense: () => void;
   onDeleteExpense: (id: string) => boolean | void | Promise<boolean | void>;
   onImportExpenses: (expenses: Expense[]) => boolean | void | Promise<boolean | void>;
   onReset: () => boolean | void | Promise<boolean | void>;
@@ -39,7 +38,6 @@ const CATEGORY_FILTERS: { key: CategoryFilter; label: string }[] = [
 
 export function ExpenseList({
   expenses,
-  onCreateExpense,
   onDeleteExpense,
   onImportExpenses,
   onReset,
@@ -248,9 +246,6 @@ export function ExpenseList({
           </p>
         </div>
         <div className="list-actions">
-          <button className="list-add-button" type="button" onClick={onCreateExpense}>
-            사용 내역 추가
-          </button>
           <button
             className="secondary-button"
             type="button"
