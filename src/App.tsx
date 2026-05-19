@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AuthPanel } from "./components/AuthPanel";
 import { CategoryCard } from "./components/CategoryCard";
 import { CategoryDetail } from "./components/CategoryDetail";
@@ -120,6 +120,7 @@ function App() {
   const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const [profileDirectory, setProfileDirectory] = useState<ProfileSummary[]>([]);
   const [isProfileNameSaving, setIsProfileNameSaving] = useState(false);
+  const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isSplitRequestCenterExpanded, setIsSplitRequestCenterExpanded] = useState(false);
   const [hiddenSentSplitRequestIds, setHiddenSentSplitRequestIds] = useState<string[]>([]);
   const splitRequestCenterRef = useRef<HTMLDivElement>(null);
@@ -172,6 +173,33 @@ function App() {
 
     return () => window.clearTimeout(timer);
   }, [syncMessage, syncErrorMessage]);
+
+  useLayoutEffect(() => {
+    if (!isExpenseFormOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsExpenseFormOpen(false);
+      }
+    };
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExpenseFormOpen]);
 
   const fetchExpenses = useCallback(async (currentUserId: string) => {
     setIsExpensesLoading(true);
@@ -1269,27 +1297,37 @@ function App() {
             </div>
           )}
 
-          <div className="dashboard-layout">
-            <aside className="entry-column">
-              <ExpenseForm
-                currentUserId={userId ?? ""}
-                currentUserEmail={userEmail}
-                expenses={expenses}
-                profiles={profileDirectory}
-                onRefreshProfiles={fetchProfileDirectory}
-                onAddExpense={addExpense}
-              />
-            </aside>
+          <div className="dashboard-stack">
+            <section className="dashboard-command-row" aria-label="복지 포인트 빠른 실행">
+              <div>
+                <p className="eyebrow">AsooSoft Welfare</p>
+                <h2>올해 복지 포인트</h2>
+              </div>
+              <button
+                className="primary-button command-add-button"
+                type="button"
+                onClick={() => setIsExpenseFormOpen(true)}
+              >
+                + 사용 내역 추가
+              </button>
+            </section>
 
-            <section className="overview-column" aria-label="복지 포인트 현황">
-              <SummaryCard
-                totalUsed={pointSummary.totalUsed}
-                totalRemaining={pointSummary.totalRemaining}
-                totalUsageRate={pointSummary.totalUsageRate}
-                isTotalExceeded={pointSummary.isTotalExceeded}
-              />
+            <SummaryCard
+              totalUsed={pointSummary.totalUsed}
+              totalRemaining={pointSummary.totalRemaining}
+              totalUsageRate={pointSummary.totalUsageRate}
+              isTotalExceeded={pointSummary.isTotalExceeded}
+            />
 
-              <section className="category-grid" aria-label="항목별 포인트 현황">
+            <section className="category-section" aria-label="항목별 포인트 현황">
+              <div className="section-title compact">
+                <div>
+                  <h2>항목별 한도</h2>
+                  <p className="section-subtitle">600,000원 기준</p>
+                </div>
+              </div>
+
+              <section className="category-grid" aria-label="항목별 포인트 카드">
                 {pointSummary.categorySummaries.map((summary) => (
                   <CategoryCard
                     key={summary.key}
@@ -1303,24 +1341,24 @@ function App() {
                   />
                 ))}
               </section>
-
-              <div ref={splitRequestCenterRef}>
-                <SplitRequestCenter
-                  isExpanded={isSplitRequestCenterExpanded}
-                  isReceivedLoading={isSplitRequestsLoading}
-                  isSentLoading={isSentSplitRequestsLoading}
-                  receivedRequests={splitRequests}
-                  sentRequests={sentSplitRequests}
-                  onAccept={acceptSplitRequest}
-                  onCancel={cancelSentSplitRequest}
-                  onDismissSent={dismissSentSplitRequest}
-                  onReject={rejectSplitRequest}
-                  onToggle={() =>
-                    setIsSplitRequestCenterExpanded((isExpanded) => !isExpanded)
-                  }
-                />
-              </div>
             </section>
+
+            <div ref={splitRequestCenterRef}>
+              <SplitRequestCenter
+                isExpanded={isSplitRequestCenterExpanded}
+                isReceivedLoading={isSplitRequestsLoading}
+                isSentLoading={isSentSplitRequestsLoading}
+                receivedRequests={splitRequests}
+                sentRequests={sentSplitRequests}
+                onAccept={acceptSplitRequest}
+                onCancel={cancelSentSplitRequest}
+                onDismissSent={dismissSentSplitRequest}
+                onReject={rejectSplitRequest}
+                onToggle={() =>
+                  setIsSplitRequestCenterExpanded((isExpanded) => !isExpanded)
+                }
+              />
+            </div>
           </div>
 
           <section className="history-section">
@@ -1329,6 +1367,7 @@ function App() {
             ) : (
               <ExpenseList
                 expenses={expenses}
+                onCreateExpense={() => setIsExpenseFormOpen(true)}
                 onDeleteExpense={deleteExpense}
                 onImportExpenses={importExpenses}
                 onReset={resetExpenses}
@@ -1336,6 +1375,34 @@ function App() {
               />
             )}
           </section>
+
+          {isExpenseFormOpen && (
+            <div
+              className="modal-backdrop add-expense-backdrop"
+              role="presentation"
+              onMouseDown={() => setIsExpenseFormOpen(false)}
+            >
+              <div
+                className="expense-form-modal"
+                role="dialog"
+                aria-label="사용 내역 추가"
+                aria-modal="true"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <ExpenseForm
+                  currentUserId={userId ?? ""}
+                  currentUserEmail={userEmail}
+                  expenses={expenses}
+                  isModal
+                  profiles={profileDirectory}
+                  onRefreshProfiles={fetchProfileDirectory}
+                  onAddExpense={addExpense}
+                  onClose={() => setIsExpenseFormOpen(false)}
+                  onSaved={() => setIsExpenseFormOpen(false)}
+                />
+              </div>
+            </div>
+          )}
 
           {selectedCategorySummary && (
             <CategoryDetail

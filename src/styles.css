@@ -65,7 +65,7 @@ button:disabled {
 }
 
 .app-shell {
-  width: min(1120px, calc(100% - 40px));
+  width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: 42px 0 56px;
 }
@@ -215,6 +215,33 @@ button.header-chip {
   box-shadow: var(--shadow-soft);
 }
 
+.dashboard-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-command-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dashboard-command-row h2 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 1.38rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.command-add-button {
+  min-height: 44px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
 .dashboard-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -237,15 +264,24 @@ button.header-chip {
   gap: 16px;
 }
 
+.category-section {
+  display: grid;
+  gap: 12px;
+}
+
+.section-title.compact {
+  margin-bottom: 0;
+}
+
 .summary-card {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 0.72fr);
-  gap: 28px;
+  grid-template-columns: minmax(330px, 1fr) minmax(260px, 0.42fr);
+  gap: 34px;
   overflow: hidden;
   background: #ffffff;
   color: var(--ink);
-  padding: 32px;
+  padding: 34px;
   box-shadow: var(--shadow);
 }
 
@@ -459,7 +495,7 @@ button.header-chip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .overview-column .category-grid {
@@ -833,6 +869,19 @@ button.header-chip {
   padding: 28px;
 }
 
+.add-expense-backdrop {
+  align-items: center;
+}
+
+.expense-form-modal {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(25, 31, 40, 0.18);
+}
+
 .category-detail {
   display: flex;
   flex-direction: column;
@@ -923,6 +972,10 @@ button.header-chip {
   padding: 24px;
 }
 
+.expense-form-panel.is-modal {
+  box-shadow: none;
+}
+
 .section-title {
   display: flex;
   align-items: center;
@@ -931,11 +984,39 @@ button.header-chip {
   margin-bottom: 18px;
 }
 
+.expense-form-title {
+  align-items: flex-start;
+}
+
+.modal-close-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #4e5968;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.modal-close-button:hover {
+  background: #e5e8eb;
+}
+
 .list-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.list-add-button {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.9rem;
 }
 
 .file-input {
@@ -1783,6 +1864,10 @@ button.header-chip {
   background: #fff;
 }
 
+.expense-card-list {
+  display: none;
+}
+
 .expense-table {
   width: 100%;
   min-width: 820px;
@@ -1889,6 +1974,49 @@ button.header-chip {
   white-space: nowrap;
 }
 
+.expense-mobile-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.expense-mobile-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.expense-mobile-card__top span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.expense-mobile-card__top strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 1.16rem;
+  font-weight: 650;
+}
+
+.expense-mobile-card p {
+  margin: 0;
+  color: #333d4b;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.mobile-edit-grid {
+  display: grid;
+  gap: 12px;
+}
+
 .category-pill {
   min-height: 26px;
   padding: 0 9px;
@@ -1917,7 +2045,7 @@ button.header-chip {
   }
 
   .category-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .entry-column .tool-panel {
@@ -1937,6 +2065,21 @@ button.header-chip {
   }
 }
 
+@media (max-width: 720px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-table-wrap {
+    display: none;
+  }
+
+  .expense-card-list {
+    display: grid;
+    gap: 10px;
+  }
+}
+
 @media (max-width: 560px) {
   .app-shell {
     width: min(100% - 22px, 1180px);
@@ -1951,6 +2094,15 @@ button.header-chip {
   .app-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-command-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .command-add-button {
+    width: 100%;
   }
 
   .header-actions {

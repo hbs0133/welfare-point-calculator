@@ -14,18 +14,24 @@ type ExpenseFormProps = {
   currentUserId: string;
   currentUserEmail: string;
   expenses: Expense[];
+  isModal?: boolean;
   profiles: ProfileSummary[];
   onRefreshProfiles: () => Promise<void> | void;
   onAddExpense: (expense: ExpenseInput) => boolean | void | Promise<boolean | void>;
+  onClose?: () => void;
+  onSaved?: () => void;
 };
 
 export function ExpenseForm({
   currentUserId,
   currentUserEmail,
   expenses,
+  isModal = false,
   profiles,
   onRefreshProfiles,
   onAddExpense,
+  onClose,
+  onSaved,
 }: ExpenseFormProps) {
   const [category, setCategory] = useState<CategoryKey>("club");
   const [amountInput, setAmountInput] = useState("");
@@ -262,6 +268,7 @@ export function ExpenseForm({
 
       setPendingExpense(null);
       resetForm();
+      onSaved?.();
     } finally {
       setIsConfirmingAdd(false);
     }
@@ -309,9 +316,22 @@ export function ExpenseForm({
   };
 
   return (
-    <section className="tool-panel">
-      <div className="section-title">
-        <h2>사용 내역 추가</h2>
+    <section className={`tool-panel expense-form-panel ${isModal ? "is-modal" : ""}`}>
+      <div className="section-title expense-form-title">
+        <div>
+          <h2>사용 내역 추가</h2>
+          <p className="section-subtitle">새 사용 내역</p>
+        </div>
+        {onClose && (
+          <button
+            className="modal-close-button"
+            type="button"
+            aria-label="사용 내역 추가 닫기"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        )}
       </div>
 
       <form className="expense-form" onSubmit={handleSubmit}>
