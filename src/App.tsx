@@ -34,7 +34,7 @@ import type {
 } from "./types";
 import { getPointSummary } from "./utils/calculations";
 import { getEmailLocalPart, isCompanyEmail, normalizeEmail } from "./utils/companyEmail";
-import asoosoftLogo from "./assets/asoosoft-logo.svg";
+import asoopointLogo from "./assets/asoopoint-logo.svg";
 
 const loadLocalExpenses = (): Expense[] => {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -1251,7 +1251,7 @@ function App() {
       <main className="app-shell">
         <header className="app-header">
           <div className="brand-heading">
-            <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
+            <img className="brand-logo" src={asoopointLogo} alt="AsooPoint" />
             <h1 className="sr-only">AsooPoint</h1>
             <p className="header-description">계정 정보를 확인하고 있습니다.</p>
           </div>
@@ -1266,7 +1266,7 @@ function App() {
       <main className="app-shell">
         <header className="app-header">
           <div className="brand-heading">
-            <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
+            <img className="brand-logo" src={asoopointLogo} alt="AsooPoint" />
             <h1 className="sr-only">AsooPoint</h1>
             <p className="header-description">Supabase 연결 정보가 필요합니다.</p>
           </div>
@@ -1282,7 +1282,7 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="brand-heading">
-          <img className="brand-logo" src={asoosoftLogo} alt="AsooSoft" />
+          <img className="brand-logo" src={asoopointLogo} alt="AsooPoint" />
           <h1 className="sr-only">AsooPoint</h1>
           <p className="header-description">복지 포인트 사용 내역을 간편하게 관리하세요.</p>
         </div>

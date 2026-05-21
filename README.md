@@ -29,7 +29,7 @@ https://asoopoint.vercel.app
 - CSV 내려받기와 CSV 불러오기
 - 기존 localStorage 데이터 계정으로 가져오기
 - 모바일 대응 반응형 UI
-- AsooSoft 브랜드 로고와 OG 태그
+- AsooPoint 브랜드 로고와 OG 태그
 
 ## 포인트 정책
 
@@ -122,7 +122,7 @@ src/
   types.ts
   styles.css
   assets/
-    asoosoft-logo.svg
+    asoopoint-logo.svg
   components/
     AuthPanel.tsx
     CategoryCard.tsx
