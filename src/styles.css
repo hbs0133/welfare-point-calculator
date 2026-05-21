@@ -84,7 +84,7 @@ button:disabled {
 
 .brand-logo {
   display: block;
-  width: 336px;
+  width: 306px;
   height: auto;
 }
 
@@ -2413,7 +2413,7 @@ button.header-chip {
   }
 
   .brand-logo {
-    width: 286px;
+    width: 264px;
   }
 
   .remaining-total {
@@ -2476,7 +2476,7 @@ button.header-chip {
   }
 
   .brand-logo {
-    width: 248px;
+    width: 226px;
   }
 
   .header-chip {
