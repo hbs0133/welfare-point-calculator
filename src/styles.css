@@ -270,7 +270,7 @@ button.header-chip {
 .floating-add-button {
   position: fixed;
   right: 48px;
-  bottom: 28px;
+  bottom: 44px;
   z-index: 35;
   display: inline-flex;
   align-items: center;
@@ -2494,7 +2494,7 @@ button.header-chip {
 
   .floating-add-button {
     right: 28px;
-    bottom: 20px;
+    bottom: 34px;
     width: 56px;
     height: 56px;
   }

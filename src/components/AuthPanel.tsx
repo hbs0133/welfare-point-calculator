@@ -37,6 +37,7 @@ export function AuthPanel() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +51,7 @@ export function AuthPanel() {
     setMessage("");
     setErrorMessage("");
     setPassword("");
+    setPasswordConfirm("");
     setDisplayName("");
   };
 
@@ -67,6 +69,16 @@ export function AuthPanel() {
 
     if (shouldShowPassword && !password) {
       setErrorMessage("회사 이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (mode === "signUp" && !passwordConfirm) {
+      setErrorMessage("비밀번호 확인을 입력해주세요.");
+      return;
+    }
+
+    if (mode === "signUp" && password !== passwordConfirm) {
+      setErrorMessage("비밀번호가 서로 일치하지 않습니다.");
       return;
     }
 
@@ -180,6 +192,20 @@ export function AuthPanel() {
                 placeholder="6자 이상"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+          )}
+
+          {mode === "signUp" && (
+            <label className="field">
+              <span>비밀번호 확인</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                minLength={6}
+                placeholder="비밀번호를 한 번 더 입력"
+                value={passwordConfirm}
+                onChange={(event) => setPasswordConfirm(event.target.value)}
               />
             </label>
           )}
