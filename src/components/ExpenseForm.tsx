@@ -1,12 +1,4 @@
-import {
-  FormEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
 import type {
   CategoryKey,
@@ -39,60 +31,6 @@ type ExpenseFormProps = {
   onUpdateExpense?: (expense: Expense) => boolean | void | Promise<boolean | void>;
 };
 
-const HANGUL_INITIALS = [
-  "ㄱ",
-  "ㄲ",
-  "ㄴ",
-  "ㄷ",
-  "ㄸ",
-  "ㄹ",
-  "ㅁ",
-  "ㅂ",
-  "ㅃ",
-  "ㅅ",
-  "ㅆ",
-  "ㅇ",
-  "ㅈ",
-  "ㅉ",
-  "ㅊ",
-  "ㅋ",
-  "ㅌ",
-  "ㅍ",
-  "ㅎ",
-];
-
-const getHangulInitials = (value: string) =>
-  Array.from(value)
-    .map((char) => {
-      const hangulIndex = char.charCodeAt(0) - 0xac00;
-
-      if (hangulIndex < 0 || hangulIndex > 11171) {
-        return char;
-      }
-
-      return HANGUL_INITIALS[Math.floor(hangulIndex / 588)];
-    })
-    .join("")
-    .toLowerCase();
-
-const matchesProfileKeyword = (
-  profile: ProfileSummary,
-  keyword: string,
-  normalizedEmail: string,
-) => {
-  const displayName = profile.displayName.trim().toLowerCase();
-  const displayNameInitials = getHangulInitials(displayName);
-  const email = normalizeEmail(profile.email);
-  const localPart = getEmailLocalPart(profile.email).toLowerCase();
-
-  return (
-    displayName.includes(keyword) ||
-    displayNameInitials.includes(keyword) ||
-    email.includes(normalizedEmail) ||
-    localPart.includes(keyword)
-  );
-};
-
 export function ExpenseForm({
   currentUserId,
   currentUserEmail,
@@ -119,7 +57,6 @@ export function ExpenseForm({
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isDirectoryDialogOpen, setIsDirectoryDialogOpen] = useState(false);
   const [splitSearchInput, setSplitSearchInput] = useState("");
-  const [highlightedSuggestionIndex, setHighlightedSuggestionIndex] = useState(0);
   const [directorySearchInput, setDirectorySearchInput] = useState("");
   const [directorySelectedIds, setDirectorySelectedIds] = useState<string[]>([]);
   const [splitDialogError, setSplitDialogError] = useState("");
@@ -139,23 +76,6 @@ export function ExpenseForm({
       ),
     [currentEmail, currentUserId, profiles],
   );
-  const splitSearchCandidates = useMemo(() => {
-    const selectedIds = new Set(splitRecipients.map((profile) => profile.userId));
-
-    return availableProfiles.filter((profile) => !selectedIds.has(profile.userId));
-  }, [availableProfiles, splitRecipients]);
-  const splitSearchSuggestions = useMemo(() => {
-    const keyword = splitSearchInput.trim().toLowerCase();
-    const normalizedEmail = normalizeEmail(splitSearchInput);
-
-    if (!keyword) {
-      return [];
-    }
-
-    return splitSearchCandidates
-      .filter((profile) => matchesProfileKeyword(profile, keyword, normalizedEmail))
-      .slice(0, 6);
-  }, [splitSearchCandidates, splitSearchInput]);
   const splitRecipientTotal = splitRecipients.reduce(
     (total, recipient) => total + recipient.amount,
     0,
@@ -182,15 +102,22 @@ export function ExpenseForm({
           : `나 포함 ${participantCount}명 · 내 차감 ${formatWon(splitRequesterAmount)}`;
   const directoryProfiles = useMemo(() => {
     const keyword = directorySearchInput.trim().toLowerCase();
-    const normalizedEmail = normalizeEmail(directorySearchInput);
 
     if (!keyword) {
       return availableProfiles;
     }
 
-    return availableProfiles.filter((profile) =>
-      matchesProfileKeyword(profile, keyword, normalizedEmail),
-    );
+    return availableProfiles.filter((profile) => {
+      const localPart = getEmailLocalPart(profile.email).toLowerCase();
+      const displayName = profile.displayName.trim().toLowerCase();
+      const email = normalizeEmail(profile.email);
+
+      return (
+        displayName.includes(keyword) ||
+        localPart.includes(keyword) ||
+        email.includes(keyword)
+      );
+    });
   }, [availableProfiles, directorySearchInput]);
 
   const warningBaseExpenses = useMemo(
@@ -219,16 +146,6 @@ export function ExpenseForm({
     setConfirmErrorMessage("");
     setPendingExpense(null);
   }, [initialExpense]);
-
-  useEffect(() => {
-    setHighlightedSuggestionIndex(0);
-  }, [splitSearchInput]);
-
-  useEffect(() => {
-    setHighlightedSuggestionIndex((currentIndex) =>
-      Math.min(currentIndex, Math.max(splitSearchSuggestions.length - 1, 0)),
-    );
-  }, [splitSearchSuggestions.length]);
 
   useLayoutEffect(() => {
     if (!isCategoryMenuOpen) {
@@ -294,8 +211,6 @@ export function ExpenseForm({
 
   const openSplitDialog = () => {
     setSplitDialogError("");
-    setSplitSearchInput("");
-    setHighlightedSuggestionIndex(0);
     setIsSplitDialogOpen(true);
     Promise.resolve(onRefreshProfiles?.()).catch(() => {
       setSplitDialogError("동료 목록을 새로 불러오지 못했습니다.");
@@ -320,7 +235,9 @@ export function ExpenseForm({
       return null;
     }
 
-    const exactMatches = splitSearchCandidates.filter((profile) => {
+    const selectedIds = new Set(splitRecipients.map((profile) => profile.userId));
+    const candidates = availableProfiles.filter((profile) => !selectedIds.has(profile.userId));
+    const exactMatches = candidates.filter((profile) => {
       const localPart = getEmailLocalPart(profile.email).toLowerCase();
       const displayName = profile.displayName.trim().toLowerCase();
 
@@ -340,9 +257,12 @@ export function ExpenseForm({
       return null;
     }
 
-    const partialMatches = splitSearchCandidates.filter((profile) =>
-      matchesProfileKeyword(profile, keyword, normalizedEmail),
-    );
+    const partialMatches = candidates.filter((profile) => {
+      const localPart = getEmailLocalPart(profile.email).toLowerCase();
+      const displayName = profile.displayName.trim().toLowerCase();
+
+      return localPart.includes(keyword) || displayName.includes(keyword);
+    });
 
     if (partialMatches.length === 1) {
       return partialMatches[0];
@@ -406,12 +326,8 @@ export function ExpenseForm({
     setSplitDialogError("");
   };
 
-  const addSplitRecipient = (profile?: ProfileSummary) => {
-    const nextProfile =
-      profile ??
-      splitSearchSuggestions[highlightedSuggestionIndex] ??
-      splitSearchSuggestions[0] ??
-      findProfile(splitSearchInput);
+  const addSplitRecipient = () => {
+    const nextProfile = findProfile(splitSearchInput);
 
     if (!nextProfile) {
       return;
@@ -435,39 +351,7 @@ export function ExpenseForm({
       }));
     });
     setSplitSearchInput("");
-    setHighlightedSuggestionIndex(0);
     setSplitDialogError("");
-  };
-
-  const handleSplitSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown" && splitSearchSuggestions.length > 0) {
-      event.preventDefault();
-      setHighlightedSuggestionIndex((currentIndex) =>
-        currentIndex >= splitSearchSuggestions.length - 1 ? 0 : currentIndex + 1,
-      );
-      return;
-    }
-
-    if (event.key === "ArrowUp" && splitSearchSuggestions.length > 0) {
-      event.preventDefault();
-      setHighlightedSuggestionIndex((currentIndex) =>
-        currentIndex <= 0 ? splitSearchSuggestions.length - 1 : currentIndex - 1,
-      );
-      return;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addSplitRecipient();
-      return;
-    }
-
-    if (event.key === "Escape" && splitSearchSuggestions.length > 0) {
-      event.preventDefault();
-      event.stopPropagation();
-      setSplitSearchInput("");
-      setSplitDialogError("");
-    }
   };
 
   const removeSplitRecipient = (userId: string) => {
@@ -767,58 +651,20 @@ export function ExpenseForm({
             </div>
 
             <div className="split-search-row">
-              <div className="split-search-combobox">
-                <input
-                  type="text"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-controls="split-search-suggestions"
-                  aria-expanded={splitSearchSuggestions.length > 0}
-                  aria-activedescendant={
-                    splitSearchSuggestions.length > 0
-                      ? `split-suggestion-${splitSearchSuggestions[highlightedSuggestionIndex]?.userId}`
-                      : undefined
+              <input
+                type="text"
+                placeholder="예: 홍길동, hbs0133, name@asoosoft.net"
+                value={splitSearchInput}
+                onChange={(event) => setSplitSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addSplitRecipient();
                   }
-                  placeholder="예: 황병선, ㅎㅂㅅ, hbs0133"
-                  value={splitSearchInput}
-                  onChange={(event) => setSplitSearchInput(event.target.value)}
-                  onKeyDown={handleSplitSearchKeyDown}
-                  autoFocus
-                />
-                {splitSearchSuggestions.length > 0 && (
-                  <div
-                    className="split-suggestion-list"
-                    id="split-search-suggestions"
-                    role="listbox"
-                  >
-                    {splitSearchSuggestions.map((profile, index) => {
-                      const isHighlighted = highlightedSuggestionIndex === index;
-
-                      return (
-                        <button
-                          className={`split-suggestion-item ${
-                            isHighlighted ? "is-highlighted" : ""
-                          }`}
-                          id={`split-suggestion-${profile.userId}`}
-                          type="button"
-                          role="option"
-                          aria-selected={isHighlighted}
-                          key={profile.userId}
-                          onMouseEnter={() => setHighlightedSuggestionIndex(index)}
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => addSplitRecipient(profile)}
-                        >
-                          <strong>{profile.displayName}</strong>
-                          <span>
-                            {getEmailLocalPart(profile.email)} · {profile.email}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <button className="secondary-button" type="button" onClick={() => addSplitRecipient()}>
+                }}
+                autoFocus
+              />
+              <button className="secondary-button" type="button" onClick={addSplitRecipient}>
                 추가하기
               </button>
               <button className="secondary-button" type="button" onClick={openDirectoryDialog}>
