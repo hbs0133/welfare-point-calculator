@@ -362,6 +362,7 @@ function App() {
                 requesterEmail: requesterEmail || "알 수 없는 요청자",
                 category: request.category,
                 totalAmount: request.total_amount,
+                amount: recipient.amount,
                 perPersonAmount: request.per_person_amount,
                 participantCount: request.participant_count,
                 memo: request.memo ?? "",
@@ -644,13 +645,27 @@ function App() {
       }
 
       const participantCount = splitRecipients.length + 1;
-      if (expense.amount % participantCount !== 0) {
+      const recipientAmountMap = new Map(
+        splitRecipients.map((recipient) => [recipient.userId, recipient.amount]),
+      );
+      const recipientAmountTotal = splitRecipients.reduce(
+        (total, recipient) => total + recipient.amount,
+        0,
+      );
+      const requesterAmount = expense.amount - recipientAmountTotal;
+
+      if (splitRecipients.some((recipient) => recipient.amount <= 0)) {
         setSyncMessage("");
-        setSyncErrorMessage(`${participantCount}명으로 나누어떨어지는 금액을 입력해주세요.`);
+        setSyncErrorMessage("각 동료에게 요청할 금액을 1원 이상으로 입력해주세요.");
         return false;
       }
 
-      const perPersonAmount = expense.amount / participantCount;
+      if (requesterAmount <= 0) {
+        setSyncMessage("");
+        setSyncErrorMessage("요청 금액 합계는 총 금액보다 작아야 합니다. 내 차감 금액도 1원 이상이어야 해요.");
+        return false;
+      }
+
       const recipientIds = splitRecipients.map((recipient) => recipient.userId);
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
@@ -685,7 +700,7 @@ function App() {
           requester_id: userId,
           category: expense.category,
           total_amount: expense.amount,
-          per_person_amount: perPersonAmount,
+          per_person_amount: requesterAmount,
           participant_count: participantCount,
           memo: expense.memo,
           date: expense.date,
@@ -714,7 +729,7 @@ function App() {
           profiles.map((profile) => ({
             request_id: request.id,
             recipient_id: profile.user_id,
-            amount: perPersonAmount,
+            amount: recipientAmountMap.get(profile.user_id) ?? 0,
           })),
         );
 
@@ -735,7 +750,7 @@ function App() {
         .insert({
           user_id: userId,
           category: expense.category,
-          amount: perPersonAmount,
+          amount: requesterAmount,
           memo: ownMemo,
           date: expense.date,
         })
@@ -761,7 +776,7 @@ function App() {
       void fetchSentSplitRequests(userId, { silent: true });
       setSyncErrorMessage("");
       setSyncMessage(
-        `1/N 요청을 보냈습니다. 나 포함 ${participantCount}명, 1인 ${perPersonAmount.toLocaleString()}원입니다.`,
+        `1/N 요청을 보냈습니다. 나 포함 ${participantCount}명, 내 차감 ${requesterAmount.toLocaleString()}원입니다.`,
       );
       return true;
     }
@@ -939,7 +954,7 @@ function App() {
       .insert({
         user_id: userId,
         category: request.category,
-        amount: request.perPersonAmount,
+        amount: request.amount,
         memo: requestMemo,
         date: request.date,
       })

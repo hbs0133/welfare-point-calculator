@@ -154,7 +154,7 @@ export function SplitRequestCenter({
                         <span className={`category-pill ${request.category}`}>
                           {CATEGORY_LABELS[request.category]}
                         </span>
-                        <h3>{formatWon(request.perPersonAmount)} 차감 요청</h3>
+                        <h3>{formatWon(request.amount)} 차감 요청</h3>
                       </div>
                       <strong>
                         {request.requesterName}
@@ -206,6 +206,10 @@ export function SplitRequestCenter({
             ) : (
               <div className="split-request-list">
                 {sentRequests.map((request) => {
+                  const requestedTotal = request.recipients.reduce(
+                    (total, recipient) => total + recipient.amount,
+                    0,
+                  );
                   const pendingCount = request.recipients.filter(
                     (recipient) => recipient.status === "pending",
                   ).length;
@@ -236,7 +240,7 @@ export function SplitRequestCenter({
                           <span className={`category-pill ${request.category}`}>
                             {CATEGORY_LABELS[request.category]}
                           </span>
-                          <h3>{formatWon(request.perPersonAmount)} 요청</h3>
+                          <h3>총 {formatWon(requestedTotal)} 요청</h3>
                         </div>
                         <strong>
                           {request.recipients.length}명에게 요청
@@ -247,6 +251,7 @@ export function SplitRequestCenter({
                       <div className="split-request-meta">
                         <span>총 {formatWon(request.totalAmount)}</span>
                         <span>{request.participantCount}명 1/N</span>
+                        <span>내 차감 {formatWon(request.perPersonAmount)}</span>
                         <span>대기 {pendingCount}</span>
                         <span>수락 {acceptedCount}</span>
                         <span>거절 {rejectedCount}</span>
@@ -260,9 +265,12 @@ export function SplitRequestCenter({
                               <strong>{recipient.displayName}</strong>
                               <span>{recipient.email}</span>
                             </div>
-                            <span className={`request-status ${recipient.status}`}>
-                              {STATUS_LABELS[recipient.status]}
-                            </span>
+                            <div className="sent-recipient-side">
+                              <strong>{formatWon(recipient.amount)}</strong>
+                              <span className={`request-status ${recipient.status}`}>
+                                {STATUS_LABELS[recipient.status]}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>

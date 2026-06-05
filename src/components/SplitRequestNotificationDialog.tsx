@@ -101,7 +101,7 @@ export function SplitRequestNotificationDialog({
                   <span className={`category-pill ${request.category}`}>
                     {CATEGORY_LABELS[request.category]}
                   </span>
-                  <strong>{formatWon(request.perPersonAmount)}</strong>
+                  <strong>{formatWon(request.amount)}</strong>
                 </div>
 
                 <div className="notification-request-card__sender">

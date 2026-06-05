@@ -18,9 +18,14 @@ export type ProfileSummary = {
   displayName: string;
 };
 
+export type SplitRecipientInput = ProfileSummary & {
+  amount: number;
+};
+
 export type ExpenseInput = Omit<Expense, "id"> & {
   split?: {
-    recipients: ProfileSummary[];
+    recipients: SplitRecipientInput[];
+    requesterAmount: number;
   };
 };
 
@@ -33,6 +38,7 @@ export type ReceivedSplitRequest = {
   requesterEmail: string;
   category: CategoryKey;
   totalAmount: number;
+  amount: number;
   perPersonAmount: number;
   participantCount: number;
   memo: string;

@@ -1,6 +1,12 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_KEYS, CATEGORY_LABELS } from "../constants";
-import type { CategoryKey, Expense, ExpenseInput, ProfileSummary } from "../types";
+import type {
+  CategoryKey,
+  Expense,
+  ExpenseInput,
+  ProfileSummary,
+  SplitRecipientInput,
+} from "../types";
 import { getProjectedWarnings } from "../utils/calculations";
 import {
   getEmailLocalPart,
@@ -47,7 +53,7 @@ export function ExpenseForm({
   );
   const [memo, setMemo] = useState(initialExpense?.memo ?? "");
   const [date, setDate] = useState(initialExpense?.date ?? getTodayISO());
-  const [splitRecipients, setSplitRecipients] = useState<ProfileSummary[]>([]);
+  const [splitRecipients, setSplitRecipients] = useState<SplitRecipientInput[]>([]);
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isDirectoryDialogOpen, setIsDirectoryDialogOpen] = useState(false);
   const [splitSearchInput, setSplitSearchInput] = useState("");
@@ -70,24 +76,30 @@ export function ExpenseForm({
       ),
     [currentEmail, currentUserId, profiles],
   );
+  const splitRecipientTotal = splitRecipients.reduce(
+    (total, recipient) => total + recipient.amount,
+    0,
+  );
   const participantCount = splitRecipients.length > 0 ? splitRecipients.length + 1 : 1;
-  const splitAmount =
-    splitRecipients.length > 0 && amount % participantCount === 0
-      ? amount / participantCount
-      : amount;
-  const pendingParticipantCount = pendingExpense?.split
-    ? pendingExpense.split.recipients.length + 1
-    : 1;
-  const pendingPerPersonAmount =
-    pendingExpense && pendingExpense.split
-      ? pendingExpense.amount / pendingParticipantCount
-      : pendingExpense?.amount ?? 0;
+  const splitRequesterAmount =
+    splitRecipients.length > 0 ? amount - splitRecipientTotal : amount;
+  const projectedAmount =
+    splitRecipients.length > 0 ? Math.max(splitRequesterAmount, 0) : amount;
+  const pendingRequesterAmount =
+    pendingExpense?.split?.requesterAmount ?? pendingExpense?.amount ?? 0;
+  const pendingRecipientTotal =
+    pendingExpense?.split?.recipients.reduce(
+      (total, recipient) => total + recipient.amount,
+      0,
+    ) ?? 0;
   const splitSummaryText =
     splitRecipients.length === 0
       ? "동료 이름, 아이디, 이메일로 요청 대상을 추가할 수 있어요."
-      : amount > 0 && amount % participantCount === 0
-        ? `나 포함 ${participantCount}명 · 1인 ${formatWon(splitAmount)}`
-        : `나 포함 ${participantCount}명 · 나누어떨어지는 금액을 입력해주세요`;
+      : amount <= 0
+        ? "금액 입력 후 각자 금액을 설정할 수 있어요."
+        : splitRequesterAmount <= 0
+          ? "요청 금액 합계가 총 금액보다 작아야 해요."
+          : `나 포함 ${participantCount}명 · 내 차감 ${formatWon(splitRequesterAmount)}`;
   const directoryProfiles = useMemo(() => {
     const keyword = directorySearchInput.trim().toLowerCase();
 
@@ -116,8 +128,8 @@ export function ExpenseForm({
     [expenses, initialExpense, isEditMode],
   );
   const projectedWarnings = useMemo(
-    () => getProjectedWarnings(warningBaseExpenses, category, splitAmount),
-    [category, splitAmount, warningBaseExpenses],
+    () => getProjectedWarnings(warningBaseExpenses, category, projectedAmount),
+    [category, projectedAmount, warningBaseExpenses],
   );
 
   useEffect(() => {
@@ -265,6 +277,55 @@ export function ExpenseForm({
     return null;
   };
 
+  const getDefaultSplitAmount = (recipientCount: number) => {
+    if (amount <= 0) {
+      return 0;
+    }
+
+    return Math.floor(amount / (recipientCount + 1));
+  };
+
+  const areSplitAmountsEven = (recipients: SplitRecipientInput[]) => {
+    const evenAmount = getDefaultSplitAmount(recipients.length);
+
+    return recipients.every((recipient) => recipient.amount === evenAmount);
+  };
+
+  const toSplitRecipient = (
+    profile: ProfileSummary,
+    recipientCount: number,
+  ): SplitRecipientInput => ({
+    ...profile,
+    amount: getDefaultSplitAmount(recipientCount),
+  });
+
+  const updateSplitRecipientAmount = (userId: string, nextInput: string) => {
+    const nextAmount = parseAmountInput(nextInput);
+
+    setSplitRecipients((currentRecipients) =>
+      currentRecipients.map((recipient) =>
+        recipient.userId === userId
+          ? {
+              ...recipient,
+              amount: nextAmount,
+            }
+          : recipient,
+      ),
+    );
+  };
+
+  const distributeSplitAmountsEvenly = () => {
+    setSplitRecipients((currentRecipients) => {
+      const evenAmount = getDefaultSplitAmount(currentRecipients.length);
+
+      return currentRecipients.map((recipient) => ({
+        ...recipient,
+        amount: evenAmount,
+      }));
+    });
+    setSplitDialogError("");
+  };
+
   const addSplitRecipient = () => {
     const nextProfile = findProfile(splitSearchInput);
 
@@ -272,7 +333,23 @@ export function ExpenseForm({
       return;
     }
 
-    setSplitRecipients((currentRecipients) => [...currentRecipients, nextProfile]);
+    setSplitRecipients((currentRecipients) => {
+      const shouldRebalance = areSplitAmountsEven(currentRecipients);
+      const nextRecipients = [
+        ...currentRecipients,
+        toSplitRecipient(nextProfile, currentRecipients.length + 1),
+      ];
+
+      if (!shouldRebalance) {
+        return nextRecipients;
+      }
+
+      const evenAmount = getDefaultSplitAmount(nextRecipients.length);
+      return nextRecipients.map((recipient) => ({
+        ...recipient,
+        amount: evenAmount,
+      }));
+    });
     setSplitSearchInput("");
     setSplitDialogError("");
   };
@@ -293,7 +370,27 @@ export function ExpenseForm({
 
   const applyDirectorySelection = () => {
     const selectedIdSet = new Set(directorySelectedIds);
-    setSplitRecipients(availableProfiles.filter((profile) => selectedIdSet.has(profile.userId)));
+    const currentRecipientMap = new Map(
+      splitRecipients.map((recipient) => [recipient.userId, recipient]),
+    );
+    const selectedProfiles = availableProfiles.filter((profile) =>
+      selectedIdSet.has(profile.userId),
+    );
+    const shouldRebalance = areSplitAmountsEven(splitRecipients);
+    const nextRecipients = selectedProfiles.map(
+      (profile) =>
+        currentRecipientMap.get(profile.userId) ??
+        toSplitRecipient(profile, selectedProfiles.length),
+    );
+
+    setSplitRecipients(
+      shouldRebalance
+        ? nextRecipients.map((recipient) => ({
+            ...recipient,
+            amount: getDefaultSplitAmount(nextRecipients.length),
+          }))
+        : nextRecipients,
+    );
     setIsDirectoryDialogOpen(false);
     setSplitDialogError("");
   };
@@ -366,8 +463,13 @@ export function ExpenseForm({
         return;
       }
 
-      if (amount % participantCount !== 0) {
-        setErrorMessage(`${participantCount}명으로 나누어떨어지는 금액을 입력해주세요.`);
+      if (splitRecipients.some((recipient) => recipient.amount <= 0)) {
+        setErrorMessage("각 동료에게 요청할 금액을 1원 이상으로 입력해주세요.");
+        return;
+      }
+
+      if (splitRecipientTotal >= amount) {
+        setErrorMessage("요청 금액 합계는 총 금액보다 작아야 해요. 내 차감 금액도 1원 이상이어야 합니다.");
         return;
       }
     }
@@ -380,6 +482,7 @@ export function ExpenseForm({
       split: !isEditMode && splitRecipients.length > 0
         ? {
             recipients: splitRecipients,
+            requesterAmount: splitRequesterAmount,
           }
         : undefined,
     });
@@ -508,6 +611,7 @@ export function ExpenseForm({
             {splitRecipients.map((recipient) => (
               <span className="split-recipient-chip" key={recipient.userId}>
                 {recipient.displayName}
+                {recipient.amount > 0 && ` · ${formatWon(recipient.amount)}`}
               </span>
             ))}
           </div>
@@ -570,16 +674,51 @@ export function ExpenseForm({
 
             {splitDialogError && <p className="warning-text">{splitDialogError}</p>}
 
+            {splitRecipients.length > 0 && (
+              <div className="split-dialog-tools">
+                <div>
+                  <span>요청 합계</span>
+                  <strong>{formatWon(splitRecipientTotal)}</strong>
+                </div>
+                <div>
+                  <span>내 차감</span>
+                  <strong className={splitRequesterAmount <= 0 ? "negative" : ""}>
+                    {formatWon(splitRequesterAmount)}
+                  </strong>
+                </div>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={distributeSplitAmountsEvenly}
+                  disabled={amount <= 0}
+                >
+                  균등 배분
+                </button>
+              </div>
+            )}
+
             <div className="split-dialog-list">
               {splitRecipients.length === 0 ? (
                 <div className="empty-state">아직 추가한 동료가 없습니다.</div>
               ) : (
                 splitRecipients.map((recipient) => (
                   <div className="split-dialog-item" key={recipient.userId}>
-                    <div>
+                    <div className="split-dialog-profile">
                       <strong>{recipient.displayName}</strong>
                       <span>{recipient.email}</span>
                     </div>
+                    <label className="split-amount-field">
+                      <span>요청 금액</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={recipient.amount ? formatNumber(recipient.amount) : ""}
+                        placeholder="0"
+                        onChange={(event) =>
+                          updateSplitRecipientAmount(recipient.userId, event.target.value)
+                        }
+                      />
+                    </label>
                     <button
                       className="mini-button"
                       type="button"
@@ -595,9 +734,9 @@ export function ExpenseForm({
             <div className="split-dialog-summary">
               <span>나 포함 {participantCount}명</span>
               <strong>
-                {amount > 0 && splitRecipients.length > 0 && amount % participantCount === 0
-                  ? `1인 ${formatWon(splitAmount)}`
-                  : "금액 입력 후 1인 금액 확인"}
+                {splitRecipients.length === 0
+                  ? "금액 입력 후 요청 대상 추가"
+                  : `내 차감 ${formatWon(splitRequesterAmount)}`}
               </strong>
             </div>
 
@@ -719,17 +858,20 @@ export function ExpenseForm({
                     <span>요청 대상</span>
                     <strong>
                       {pendingExpense.split.recipients
-                        .map((recipient) => recipient.displayName)
+                        .map(
+                          (recipient) =>
+                            `${recipient.displayName} ${formatWon(recipient.amount)}`,
+                        )
                         .join(", ")}
                     </strong>
                   </div>
                   <div>
-                    <span>1인 금액</span>
-                    <strong>{formatWon(pendingPerPersonAmount)}</strong>
+                    <span>요청 합계</span>
+                    <strong>{formatWon(pendingRecipientTotal)}</strong>
                   </div>
                   <div>
                     <span>본인 차감</span>
-                    <strong>{formatWon(pendingPerPersonAmount)}</strong>
+                    <strong>{formatWon(pendingRequesterAmount)}</strong>
                   </div>
                 </>
               )}
