@@ -1637,8 +1637,66 @@ button.header-chip {
   margin-top: 18px;
 }
 
+.split-search-combobox {
+  position: relative;
+  min-width: 0;
+}
+
 .split-search-row .secondary-button {
   min-height: 46px;
+}
+
+.split-suggestion-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 85;
+  display: grid;
+  gap: 4px;
+  max-height: 230px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 6px;
+  box-shadow: 0 16px 34px rgba(25, 31, 40, 0.14);
+}
+
+.split-suggestion-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 10px 11px;
+  text-align: left;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.split-suggestion-item:hover,
+.split-suggestion-item.is-highlighted {
+  background: var(--blue-soft);
+}
+
+.split-suggestion-item strong,
+.split-suggestion-item span {
+  display: block;
+}
+
+.split-suggestion-item strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.split-suggestion-item span {
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .split-dialog-list {
