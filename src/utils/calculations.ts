@@ -117,3 +117,31 @@ export const getProjectedWarnings = (
     willExceedCategory: categoryUsedAfterAdd > CATEGORY_LIMIT,
   };
 };
+
+export const getUsageStatus = (usageRate: number) => {
+  if (usageRate >= 100) {
+    return {
+      label: "한도 초과",
+      tone: "danger",
+    };
+  }
+
+  if (usageRate >= 90) {
+    return {
+      label: "초과 임박",
+      tone: "danger",
+    };
+  }
+
+  if (usageRate >= 80) {
+    return {
+      label: "한도 근접",
+      tone: "warning",
+    };
+  }
+
+  return {
+    label: "여유",
+    tone: "good",
+  };
+};

@@ -1,4 +1,5 @@
 import { ANNUAL_LIMIT } from "../constants";
+import { getUsageStatus } from "../utils/calculations";
 import { formatWon } from "../utils/format";
 
 type SummaryCardProps = {
@@ -14,6 +15,7 @@ export function SummaryCard({
   totalUsageRate,
   isTotalExceeded,
 }: SummaryCardProps) {
+  const status = getUsageStatus(totalUsageRate);
   const usageTone =
     isTotalExceeded || totalUsageRate >= 90
       ? "danger"
@@ -26,8 +28,8 @@ export function SummaryCard({
       <div className="summary-card__headline">
         <div className="summary-card__topline">
           <p className="eyebrow">전체 잔여 포인트</p>
-          <span className={`status-pill ${isTotalExceeded ? "danger" : "good"}`}>
-            {isTotalExceeded ? "초과" : "정상"}
+          <span className={`status-pill ${status.tone}`}>
+            {status.label}
           </span>
         </div>
         <strong className={`remaining-total ${totalRemaining < 0 ? "negative" : ""}`}>

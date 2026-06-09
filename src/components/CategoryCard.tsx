@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { CategorySummary } from "../types";
+import { getUsageStatus } from "../utils/calculations";
 import { formatWon } from "../utils/format";
 
 type CategoryCardProps = {
@@ -9,6 +10,7 @@ type CategoryCardProps = {
 };
 
 export function CategoryCard({ summary, isSelected, onSelect }: CategoryCardProps) {
+  const status = getUsageStatus(summary.usageRate);
   const displayLabel =
     summary.key === "bookEducationOffice" ? "도서대여/교육 사무용품" : summary.label;
 
@@ -35,8 +37,8 @@ export function CategoryCard({ summary, isSelected, onSelect }: CategoryCardProp
       <div className="category-card__header">
         <div>
           <h2>{displayLabel}</h2>
-          <span className={`status-pill ${summary.isExceeded ? "danger" : "good"}`}>
-            {summary.isExceeded ? "초과" : "정상"}
+          <span className={`status-pill ${status.tone}`}>
+            {status.label}
           </span>
         </div>
         <strong>{Math.round(summary.usageRate)}%</strong>

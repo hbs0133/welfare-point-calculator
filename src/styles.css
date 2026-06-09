@@ -424,8 +424,8 @@ button.header-chip {
 }
 
 .status-pill {
-  width: 54px;
-  padding: 0 10px;
+  min-width: 54px;
+  padding: 0 12px;
 }
 
 .status-pill.good {
@@ -441,6 +441,11 @@ button.header-chip {
 .summary-card .status-pill.good {
   background: var(--blue-soft);
   color: var(--blue-dark);
+}
+
+.status-pill.warning {
+  background: var(--warning-soft);
+  color: var(--amber);
 }
 
 .status-pill.danger {
