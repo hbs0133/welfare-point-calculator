@@ -434,8 +434,13 @@ button.header-chip {
 }
 
 .category-card .status-pill.good {
+  justify-self: start;
   background: var(--category-soft);
   color: var(--category-color);
+}
+
+.category-card .status-pill {
+  justify-self: start;
 }
 
 .summary-card .status-pill.good {

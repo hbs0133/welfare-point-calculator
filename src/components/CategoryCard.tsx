@@ -12,7 +12,7 @@ type CategoryCardProps = {
 export function CategoryCard({ summary, isSelected, onSelect }: CategoryCardProps) {
   const status = getUsageStatus(summary.usageRate);
   const displayLabel =
-    summary.key === "bookEducationOffice" ? "도서대여/교육 사무용품" : summary.label;
+    summary.key === "bookEducationOffice" ? "도서대여 / 교육 / 사무용품" : summary.label;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Enter" || event.key === " ") {
